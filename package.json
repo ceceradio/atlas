@@ -16,15 +16,12 @@
   "license": "UNLICENSED",
   "dependencies": {
     "@tsconfig/node18": "^1.0.1",
-    "cypress": "^10.6.0",
     "dotenv": "^16.0.1",
     "npm-run-all": "^4.1.5",
     "pg": "^8.8.0",
-    "pug": "^3.0.2",
     "react": "^18.2.0",
     "reflect-metadata": "^0.1.13",
     "ts-node": "^10.9.1",
-    "typeorm": "^0.3.7",
     "typescript": "^4.7.4"
   },
   "devDependencies": {
