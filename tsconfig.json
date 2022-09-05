@@ -2,6 +2,8 @@
     "extends": "@tsconfig/node18/tsconfig.json",
     "compilerOptions": {
       "moduleResolution": "node",
+      "lib": ["ES2020", "DOM"],
+      "target": "ES2020",
       "module": "commonjs",
       "noImplicitAny": true,
       "removeComments": true,
@@ -12,6 +14,6 @@
       "strictPropertyInitialization": false,
       "experimentalDecorators": true
     },
-    "include": ["models/src/**/*","web/src/**/*"],
+    "include": ["**/*.ts", "**/*.tsx"],
     "exclude": ["node_modules", "**/*.spec.ts"]
 }

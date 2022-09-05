@@ -1,1 +1,6 @@
+certs
 node_modules
+*.env*
+*.key
+*.cert
+*.pem

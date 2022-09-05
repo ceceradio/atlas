@@ -1,5 +1,15 @@
 version: '3.8'
 services:
+  nginx:
+    image: nginx:latest
+    restart: always
+    hostname: local.cece.zone
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+      - ./certs:/etc/ssl/certs
   db:
     image: postgres:14.5-alpine
     restart: always
@@ -14,6 +24,23 @@ services:
     image: redis:alpine
     ports:
       - '6379:6379'
+  faktory:
+    image: contribsys/faktory:latest
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - '7419:7419'
+      - '7420:7420'
+    volumes: 
+      - db-faktory:/var/lib/postgresql/data
 volumes:
   db:
+    driver: local
+  db-faktory:
+    driver: local
+  nginx:
+    driver: local
+  certs:
     driver: local

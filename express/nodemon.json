@@ -1,0 +1,5 @@
+{
+    "execMap": {
+        "ts": "DOTENV_CONFIG_PATH=../.env ts-node -r reflect-metadata -r dotenv/config "
+    }
+}
