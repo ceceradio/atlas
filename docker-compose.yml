@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   nginx:
-    image: nginx:latest
+    image: nginx:mainline-alpine
     restart: always
     hostname: local.cece.zone
     ports:
@@ -18,7 +18,7 @@ services:
       - POSTGRES_PASSWORD=postgres
     ports:
       - '5432:5432'
-    volumes: 
+    volumes:
       - db:/var/lib/postgresql/data
   redis:
     image: redis:alpine
@@ -33,7 +33,7 @@ services:
     ports:
       - '7419:7419'
       - '7420:7420'
-    volumes: 
+    volumes:
       - db-faktory:/var/lib/postgresql/data
 volumes:
   db:
