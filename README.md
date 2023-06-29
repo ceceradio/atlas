@@ -7,7 +7,7 @@ local.cece.zone
 # install
 
 nvm
-node16
+node18
 docker
 ext prettier-vscode
 ext eslint

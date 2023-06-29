@@ -1,19 +1,19 @@
 {
-    "extends": "@tsconfig/node18/tsconfig.json",
-    "compilerOptions": {
-      "moduleResolution": "node",
-      "lib": ["ES2020", "DOM"],
-      "target": "ES2020",
-      "module": "commonjs",
-      "noImplicitAny": true,
-      "removeComments": true,
-      "preserveConstEnums": true,
-      "sourceMap": true,
-      "esModuleInterop": true,
-      "emitDecoratorMetadata": true,
-      "strictPropertyInitialization": false,
-      "experimentalDecorators": true
-    },
-    "include": ["**/*.ts", "**/*.tsx"],
-    "exclude": ["node_modules", "**/*.spec.ts"]
+  "extends": "@tsconfig/node18/tsconfig.json",
+  "compilerOptions": {
+    "moduleResolution": "node",
+    "lib": ["ES2020", "DOM"],
+    "target": "ES2020",
+    "module": "commonjs",
+    "noImplicitAny": true,
+    "removeComments": true,
+    "preserveConstEnums": true,
+    "sourceMap": true,
+    "esModuleInterop": true,
+    "emitDecoratorMetadata": true,
+    "strictPropertyInitialization": false,
+    "experimentalDecorators": true
+  },
+  "include": ["**/*.ts", "**/*.tsx", "models/src/data-source.js"],
+  "exclude": ["node_modules", "**/*.spec.ts"]
 }
