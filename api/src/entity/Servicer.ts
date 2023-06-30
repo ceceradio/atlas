@@ -1,9 +1,12 @@
+'use server'
 import {
   Column,
+  CreateDateColumn,
   Entity,
   Index,
   OneToMany,
   PrimaryGeneratedColumn,
+  Relation,
 } from 'typeorm'
 import { ServicerAuthMethod } from './ServicerAuthMethod'
 import { ServicingKey } from './ServicingKey'
@@ -18,8 +21,14 @@ export class Servicer {
   email: string
 
   @OneToMany(() => ServicerAuthMethod, (authMethod) => authMethod.servicer)
-  authMethods: ServicerAuthMethod
+  authMethods: Relation<ServicerAuthMethod>[]
 
   @OneToMany(() => ServicingKey, (servicingKey) => servicingKey.servicer)
-  servicingKeys: ServicingKey
+  servicingKeys: Relation<ServicingKey>[]
+
+  @CreateDateColumn({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP(6)',
+  })
+  public createdAt: Date
 }

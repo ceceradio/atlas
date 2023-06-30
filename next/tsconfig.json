@@ -21,8 +21,21 @@
     ],
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "emitDecoratorMetadata": true,
+    "strictPropertyInitialization": false,
+    "experimentalDecorators": true
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "../models/src/",
+    "../api/src/entity",
+    "../api/src/migration",
+    "../api/src/route.ts",
+    "../api/src/API.ts"
+  ],
   "exclude": ["node_modules"]
 }

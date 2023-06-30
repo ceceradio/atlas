@@ -1,4 +1,13 @@
-import { Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm'
+'use server'
+import {
+  CreateDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  Relation,
+} from 'typeorm'
 import { Message } from './Message'
 import { Organization } from './Organization'
 import { User } from './User'
@@ -9,11 +18,19 @@ export class Conversation {
   uuid: string
 
   @ManyToOne(() => User, (user) => user.createdConversations)
+  @JoinColumn()
   creator: User
 
   @ManyToOne(() => Organization, (organization) => organization.conversations)
+  @JoinColumn()
   organization: Organization
 
   @OneToMany(() => Message, (message) => message.conversation)
-  messages: Message[]
+  messages: Relation<Message>[]
+
+  @CreateDateColumn({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP(6)',
+  })
+  public createdAt: Date
 }
