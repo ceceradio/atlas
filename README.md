@@ -2,7 +2,7 @@
 
 atlas, a world carrying environment
 
-local.cece.zone
+local.atlas.zone
 
 # install
 
