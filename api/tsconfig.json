@@ -12,8 +12,14 @@
     "esModuleInterop": true,
     "emitDecoratorMetadata": true,
     "strictPropertyInitialization": false,
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
-  "include": ["**/*.ts", "**/*.tsx", "models/src/data-source.js"],
-  "exclude": ["node_modules", "**/*.spec.ts"]
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "**/*.spec.ts"],
+  "ts-node": {
+    "require": ["tsconfig-paths/register"]
+  }
 }
