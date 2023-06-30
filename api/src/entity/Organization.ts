@@ -1,4 +1,11 @@
-import { Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm'
+'use server'
+import {
+  CreateDateColumn,
+  Entity,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  Relation,
+} from 'typeorm'
 import { Conversation } from './Conversation'
 import { Depository } from './Depository'
 import { ServicingKey } from './ServicingKey'
@@ -10,14 +17,20 @@ export class Organization {
   uuid: string
 
   @OneToMany(() => ServicingKey, (servicingKey) => servicingKey.organization)
-  servicingKeys: ServicingKey
+  servicingKeys: Relation<ServicingKey>[]
 
   @OneToMany(() => User, (user) => user.organization)
-  users: User[]
+  users: Relation<User>[]
 
   @OneToMany(() => Depository, (depository) => depository.organization)
-  depositories: Depository[]
+  depositories: Relation<Depository>[]
 
   @OneToMany(() => Conversation, (conversation) => conversation.organization)
-  conversations: Conversation[]
+  conversations: Relation<Conversation>[]
+
+  @CreateDateColumn({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP(6)',
+  })
+  public createdAt: Date
 }

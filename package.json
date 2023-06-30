@@ -2,42 +2,19 @@
   "name": "atlas",
   "type": "module",
   "version": "1.0.0",
-  "description": "funeral home monorepo",
+  "description": "atlas AI assistant monorepo",
   "scripts": {
     "prestart": "docker compose up -d",
     "start": "run-p start:*",
+    "start:next": "cd next && npm run dev",
     "start:express": "cd express && npm start",
-    "start:www": "cd www && HTTPS=true npm start",
-    "make-migration": "npx typeorm-ts-node-commonjs migration:generate -d ./models/src/data-source.ts ./models/src/migration/migration",
+    "make-migration": "npx typeorm-ts-node-commonjs migration:generate -d ./api/src/data-source.ts ./api/src/migration/migration",
     "make-cert": "./makecert.sh",
-    "lint": "eslint . --fix --ext .ts,.tsx",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "cece wren",
   "license": "UNLICENSED",
   "dependencies": {
-    "@auth0/auth0-react": "^2.1.1",
-    "@chakra-ui/next-js": "^2.1.4",
-    "@chakra-ui/react": "^2.7.1",
-    "@emotion/react": "^11.11.1",
-    "@emotion/styled": "^11.11.0",
-    "@tsconfig/node18": "^1.0.1",
-    "dotenv": "^16.0.1",
-    "framer-motion": "^10.12.17",
-    "npm-run-all": "^4.1.5",
-    "pg": "^8.8.0",
-    "react": "^18.2.0",
-    "reflect-metadata": "^0.1.13",
-    "ts-node": "^10.9.1",
-    "typeorm": "^0.3.17",
-    "typescript": "^5.0.4"
-  },
-  "devDependencies": {
-    "@types/node": "^18.7.13",
-    "@typescript-eslint/eslint-plugin": "^5.36.1",
-    "@typescript-eslint/parser": "^5.36.1",
-    "eslint": "^8.23.0",
-    "eslint-config-prettier": "^8.5.0",
-    "prettier": "^2.7.1"
+    "npm-run-all": "^4.1.5"
   }
 }

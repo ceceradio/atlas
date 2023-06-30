@@ -1,11 +1,11 @@
-import { NextResponse } from 'next/server'
 import { ChatCompletionRequestMessage, Configuration, OpenAIApi } from 'openai'
+
 const configuration = new Configuration({
   organization: 'org-FzAKGmdFjXJUOnWcraPLaTJr',
   apiKey: process.env.OPENAI_API_KEY,
 })
 const openai = new OpenAIApi(configuration)
-const openingMessages: ChatCompletionRequestMessage[] = [
+export const openingMessages: ChatCompletionRequestMessage[] = [
   {
     name: 'Atlas',
     role: 'system',
@@ -26,45 +26,11 @@ const openingMessages: ChatCompletionRequestMessage[] = [
   },
 ]
 
-class ConversationAPI {
-  static async get(messages?: ChatCompletionRequestMessage[]) {
+export class ConversationAPI {
+  static async answerPrompt(messages?: ChatCompletionRequestMessage[]) {
     return await openai.createChatCompletion({
       model: 'gpt-3.5-turbo',
       messages: messages || openingMessages,
     })
-  }
-}
-
-export async function GET(request: Request) {
-  try {
-    const { data, status } = await ConversationAPI.get()
-    if (status != 200) {
-      console.error(data)
-      throw new Error()
-    }
-    if (!data.choices[0].message) {
-      throw new Error('no message returned')
-    }
-    const newQuestion: ChatCompletionRequestMessage = {
-      role: 'user',
-      name: 'Residents',
-      content:
-        'If my address is 300 Manning Blvd, albany, ny 12206 what are the latitude and longitude coordinates of my house?',
-    }
-    const newPrompt = openingMessages.concat([
-      data.choices[0].message,
-      newQuestion,
-    ])
-    {
-      const { data, status } = await ConversationAPI.get(newPrompt)
-      if (status != 200) {
-        console.error(data)
-        throw new Error()
-      }
-      return NextResponse.json({ data })
-    }
-  } catch (error) {
-    console.error(error)
-    return NextResponse.json({ error })
   }
 }
