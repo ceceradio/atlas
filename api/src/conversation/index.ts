@@ -48,6 +48,9 @@ conversationApp.patch('/conversation', async (request, response) => {
   // look up prior conversation
   const [conversation] = await AppDataSource.getRepository(Conversation).find({
     where: { uuid },
+    order: {
+      created: 'ASC',
+    },
     relations: {
       messages: true,
     },

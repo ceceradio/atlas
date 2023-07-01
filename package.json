@@ -7,7 +7,7 @@
     "prestart": "docker compose up -d",
     "start": "run-p start:*",
     "start:next": "cd next && npm run dev",
-    "start:express": "cd express && npm start",
+    "start:api": "cd api && npm start",
     "make-migration": "npx typeorm-ts-node-commonjs migration:generate -d ./api/src/data-source.ts ./api/src/migration/migration",
     "make-cert": "./makecert.sh",
     "test": "echo \"Error: no test specified\" && exit 1"
