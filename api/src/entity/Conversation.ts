@@ -35,11 +35,25 @@ export class Conversation {
   })
   public created: Date
 
-  static async create(AppDataSource: DataSource, creator: User) {
-    const conversation = AppDataSource.getRepository(Conversation).create({
+  static async create(dataSource: DataSource, creator: User) {
+    const conversation = dataSource.getRepository(Conversation).create({
       creator,
       organization: creator.organization,
     })
-    return await AppDataSource.getRepository(Conversation).save(conversation)
+    return await dataSource.getRepository(Conversation).save(conversation)
+  }
+
+  static async get(dataSource: DataSource, uuid: string) {
+    const [conversation] = await dataSource.getRepository(Conversation).find({
+      where: { uuid },
+      order: {
+        created: 'ASC',
+      },
+      relations: {
+        messages: true,
+      },
+    })
+    if (!conversation) throw new Error()
+    return conversation
   }
 }

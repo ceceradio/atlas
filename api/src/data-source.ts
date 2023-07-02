@@ -31,4 +31,7 @@ export const AppDataSource = new DataSource({
   migrations: ['./migration/*.ts'],
   subscribers: [],
 })
-AppDataSource.initialize()
+const initializePromise = AppDataSource.initialize()
+export async function getDataSource() {
+  return await initializePromise
+}
