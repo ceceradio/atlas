@@ -1,6 +1,7 @@
 'use server'
 import {
   CreateDateColumn,
+  DataSource,
   Entity,
   JoinColumn,
   ManyToOne,
@@ -32,4 +33,11 @@ export class User {
     default: () => 'CURRENT_TIMESTAMP(6)',
   })
   public createdAt: Date
+
+  static async create(AppDataSource: DataSource, organization: Organization) {
+    const user = AppDataSource.getRepository(User).create({
+      organization,
+    })
+    return await AppDataSource.getRepository(User).save(user)
+  }
 }
