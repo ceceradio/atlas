@@ -1,6 +1,6 @@
 import bodyParser from 'body-parser'
 import express from 'express'
-import { conversationApp } from './conversation'
+import { conversationApp } from './apps/conversation'
 
 const app = express()
 

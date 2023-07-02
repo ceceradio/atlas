@@ -1,6 +1,7 @@
 'use server'
 import {
   CreateDateColumn,
+  DataSource,
   Entity,
   OneToMany,
   PrimaryGeneratedColumn,
@@ -33,4 +34,9 @@ export class Organization {
     default: () => 'CURRENT_TIMESTAMP(6)',
   })
   public createdAt: Date
+
+  static async create(AppDataSource: DataSource) {
+    const organization = AppDataSource.getRepository(Organization).create()
+    return await AppDataSource.getRepository(Organization).save(organization)
+  }
 }

@@ -3,6 +3,7 @@ import { ChatCompletionRequestMessage } from 'openai'
 import {
   Column,
   CreateDateColumn,
+  DataSource,
   Entity,
   JoinColumn,
   ManyToOne,
@@ -39,5 +40,19 @@ export class Message {
       name: this.author ? 'Residents' : 'Atlas',
       content: this.content,
     }
+  }
+
+  static async create(
+    AppDataSource: DataSource,
+    conversation: Conversation,
+    author: User | null,
+    content: string,
+  ) {
+    const message = AppDataSource.getRepository(Message).create({
+      conversation,
+      author,
+      content,
+    })
+    return await AppDataSource.getRepository(Message).save(message)
   }
 }

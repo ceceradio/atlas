@@ -1,6 +1,7 @@
 'use server'
 import {
   CreateDateColumn,
+  DataSource,
   Entity,
   JoinColumn,
   ManyToOne,
@@ -33,4 +34,12 @@ export class Conversation {
     default: () => 'CURRENT_TIMESTAMP(6)',
   })
   public created: Date
+
+  static async create(AppDataSource: DataSource, creator: User) {
+    const conversation = AppDataSource.getRepository(Conversation).create({
+      creator,
+      organization: creator.organization,
+    })
+    return await AppDataSource.getRepository(Conversation).save(conversation)
+  }
 }
