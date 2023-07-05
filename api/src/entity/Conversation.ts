@@ -1,4 +1,5 @@
 'use server'
+import { AtlasError } from '@/apps/errors'
 import { Message } from '@/entity/Message'
 import { Organization } from '@/entity/Organization'
 import { User } from '@/entity/User'
@@ -63,7 +64,7 @@ export class Conversation {
         messages: true,
       },
     })
-    if (!conversation) throw new Error()
+    if (!conversation) throw new AtlasError()
     return conversation
   }
 }

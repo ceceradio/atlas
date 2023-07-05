@@ -1,3 +1,4 @@
+import { AtlasError } from '@/apps/errors'
 import { ChatCompletionRequestMessage, Configuration, OpenAIApi } from 'openai'
 
 const configuration = new Configuration({
@@ -40,10 +41,10 @@ export default class AtlasAPI {
     const { data, status } = await ConversationAPI.answerPrompt(messages)
     if (status != 200) {
       console.error(data)
-      throw new Error()
+      throw new AtlasError()
     }
     if (!data.choices[0].message || !data.choices[0].message.content) {
-      throw new Error('no message returned')
+      throw new AtlasError('no message returned')
     }
     return data.choices[0].message.content
   }

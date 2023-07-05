@@ -23,7 +23,6 @@ export default function RSVP() {
           scope: 'self', // Scope that exists for the API being called. You can create these through the Auth0 Management API or through the Auth0 Dashboard in the Permissions view of your API.
         },
       })
-      console.log('got a token')
       const response = await fetch('https://local.atlas.zone/api/rsvp', {
         body: JSON.stringify({
           provider: 'auth0',

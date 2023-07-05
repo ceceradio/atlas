@@ -2,6 +2,7 @@ import { AppDataSource } from '@/data-source'
 import { AuthProfile } from '@/entity/AuthProfile'
 import express from 'express'
 import { auth } from 'express-oauth2-jwt-bearer'
+import { AtlasError } from './errors'
 
 const { AUTH0_AUDIENCE, AUTH0_DOMAIN } = process.env
 
@@ -15,7 +16,7 @@ export const checkJwt = auth(config)
 export const authorize: express.Handler = (request, response, next) => {
   checkJwt(request, response, () => {
     const providerId = request.auth?.payload?.sub
-    if (!providerId) throw new Error('401')
+    if (!providerId) throw new AtlasError('401')
     AuthProfile.getUser(AppDataSource, 'auth0', providerId)
       .then((user) => {
         response.locals.user = user
@@ -23,7 +24,7 @@ export const authorize: express.Handler = (request, response, next) => {
       })
       .catch((e) => {
         console.error(e)
-        throw new Error('401')
+        throw new AtlasError('401')
       })
   })
 }
