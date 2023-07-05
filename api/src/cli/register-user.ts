@@ -12,5 +12,5 @@ export default async function registerUser(
   const organization = await Organization.get(dataSource, organizationId)
   const user = await User.create(dataSource, organization)
   //@todo create an invite handler in the app and api
-  return `https://${LOCAL_DOMAIN}/rsvp/${user.inviteCode}`
+  return `https://${LOCAL_DOMAIN}/rsvp?inviteCode=${user.inviteCode}`
 }

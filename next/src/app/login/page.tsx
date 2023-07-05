@@ -29,7 +29,7 @@ export default function Login() {
         },
       })
       const { user } = await response.json()
-      if (user.inviteCode) router.push(`/rsvp/${user.inviteCode}`)
+      if (user.inviteCode) router.push(`/rsvp?inviteCode=${user.inviteCode}`)
       else router.push(`/zone`)
     }
 

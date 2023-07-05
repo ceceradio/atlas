@@ -7,6 +7,7 @@ import {
   DataSource,
   Entity,
   Equal,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -27,13 +28,14 @@ export class AuthProfile {
   provider: AuthProviders
 
   @Column()
+  @Index({ unique: true })
   providerId: string
 
   @CreateDateColumn({
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP(6)',
   })
-  public createdAt: Date
+  public created: Date
 
   static async create(
     dataSource: DataSource,

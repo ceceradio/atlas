@@ -15,15 +15,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <Auth0Provider
       domain={AUTH0_DOMAIN}
       clientId={AUTH0_CLIENTID}
+      cacheLocation="localstorage"
       onRedirectCallback={(appState) => {
-        console.log(appState)
         if (!appState) return
         if (appState.type === 'rsvp')
-          router.push(`/rsvp/${appState.inviteCode}`)
+          router.push(`/rsvp?inviteCode=${appState.inviteCode}`)
         if (appState.type === 'login') router.push('/login')
       }}
       authorizationParams={{
-        redirect_uri: 'https://local.atlas.zone/zone',
+        redirect_uri: 'https://local.atlas.zone',
         audience: AUTH0_AUDIENCE,
         scope: 'self',
       }}

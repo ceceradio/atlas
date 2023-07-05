@@ -2,12 +2,12 @@
 
 import { useAuth0 } from '@auth0/auth0-react'
 import { Spinner } from '@chakra-ui/react'
-import { useParams, useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { MouseEventHandler, useEffect } from 'react'
 
 export default function RSVP() {
   const { isLoading, isAuthenticated, error, loginWithRedirect } = useAuth0()
-  const { inviteCode } = useParams()
+  const inviteCode = useSearchParams().get('inviteCode')
   if (isLoading) return <Spinner />
   if (error) return <div>Oops... {error.message}</div>
   if (!inviteCode) throw new Error()
@@ -29,7 +29,7 @@ export default function RSVP() {
 
 const RSVPScreen = () => {
   const { getAccessTokenSilently } = useAuth0()
-  const { inviteCode } = useParams()
+  const inviteCode = useSearchParams().get('inviteCode')
   const router = useRouter()
   useEffect(() => {
     const acceptInvitation = async () => {
