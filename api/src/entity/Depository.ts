@@ -1,4 +1,5 @@
 'use server'
+import { Organization } from '@/entity/Organization'
 import {
   CreateDateColumn,
   Entity,
@@ -6,7 +7,6 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm'
-import { Organization } from './Organization'
 
 @Entity()
 export class Depository {

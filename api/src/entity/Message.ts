@@ -1,4 +1,6 @@
 'use server'
+import { Conversation } from '@/entity/Conversation'
+import { User } from '@/entity/User'
 import { ChatCompletionRequestMessage } from 'openai'
 import {
   Column,
@@ -9,8 +11,6 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm'
-import { Conversation } from './Conversation'
-import { User } from './User'
 
 @Entity()
 export class Message {

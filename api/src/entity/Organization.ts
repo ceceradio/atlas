@@ -1,4 +1,8 @@
 'use server'
+import { Conversation } from '@/entity/Conversation'
+import { Depository } from '@/entity/Depository'
+import { ServicingKey } from '@/entity/ServicingKey'
+import { User } from '@/entity/User'
 import {
   CreateDateColumn,
   DataSource,
@@ -7,10 +11,6 @@ import {
   PrimaryGeneratedColumn,
   Relation,
 } from 'typeorm'
-import { Conversation } from './Conversation'
-import { Depository } from './Depository'
-import { ServicingKey } from './ServicingKey'
-import { User } from './User'
 
 @Entity()
 export class Organization {
@@ -33,10 +33,29 @@ export class Organization {
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP(6)',
   })
-  public createdAt: Date
+  public created: Date
 
   static async create(AppDataSource: DataSource) {
     const organization = AppDataSource.getRepository(Organization).create()
     return await AppDataSource.getRepository(Organization).save(organization)
+  }
+
+  static async get(dataSource: DataSource, uuid: string) {
+    const [organization] = await dataSource.getRepository(Organization).find({
+      where: { uuid },
+      order: {
+        created: 'ASC',
+      },
+    })
+    if (!organization) throw new Error()
+    return organization
+  }
+
+  static async list(dataSource: DataSource) {
+    return dataSource.getRepository(Organization).find({
+      order: {
+        created: 'ASC',
+      },
+    })
   }
 }

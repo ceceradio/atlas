@@ -1,4 +1,5 @@
 'use server'
+import { Servicer } from '@/entity/Servicer'
 import {
   Column,
   CreateDateColumn,
@@ -7,7 +8,6 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm'
-import { Servicer } from './Servicer'
 
 @Entity()
 export class ServicerAuthMethod {

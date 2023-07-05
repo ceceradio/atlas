@@ -1,13 +1,15 @@
 import 'reflect-metadata'
+//
+import { AuthProfile } from '@/entity/AuthProfile'
+import { Conversation } from '@/entity/Conversation'
+import { Depository } from '@/entity/Depository'
+import { Message } from '@/entity/Message'
+import { Organization } from '@/entity/Organization'
+import { Servicer } from '@/entity/Servicer'
+import { ServicerAuthMethod } from '@/entity/ServicerAuthMethod'
+import { ServicingKey } from '@/entity/ServicingKey'
+import { User } from '@/entity/User'
 import { DataSource } from 'typeorm'
-import { Conversation } from '../../api/src/entity/Conversation'
-import { Depository } from '../../api/src/entity/Depository'
-import { Message } from '../../api/src/entity/Message'
-import { Organization } from '../../api/src/entity/Organization'
-import { Servicer } from '../../api/src/entity/Servicer'
-import { ServicerAuthMethod } from '../../api/src/entity/ServicerAuthMethod'
-import { ServicingKey } from '../../api/src/entity/ServicingKey'
-import { User } from '../../api/src/entity/User'
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -24,11 +26,15 @@ export const AppDataSource = new DataSource({
     Servicer,
     ServicerAuthMethod,
     ServicingKey,
+    AuthProfile,
     User,
     Conversation,
     Message,
   ],
-  migrations: ['./migration/*.ts'],
+  migrations: ['./migration/*.{js,ts}'],
   subscribers: [],
 })
-AppDataSource.initialize()
+const initializePromise = AppDataSource.initialize()
+export async function getDataSource() {
+  return await initializePromise
+}

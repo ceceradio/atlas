@@ -1,4 +1,6 @@
 'use server'
+import { ServicerAuthMethod } from '@/entity/ServicerAuthMethod'
+import { ServicingKey } from '@/entity/ServicingKey'
 import {
   Column,
   CreateDateColumn,
@@ -8,8 +10,6 @@ import {
   PrimaryGeneratedColumn,
   Relation,
 } from 'typeorm'
-import { ServicerAuthMethod } from './ServicerAuthMethod'
-import { ServicingKey } from './ServicingKey'
 
 @Entity()
 export class Servicer {
