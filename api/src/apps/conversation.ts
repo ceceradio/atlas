@@ -7,7 +7,6 @@ import { User } from '@/entity/User'
 import express from 'express'
 
 export const conversationApp = express()
-
 function getFullOpenAIMessages(conversation: Conversation) {
   return openingMessages.concat(
     conversation.messages.map((message) => message.toOpenAI()),
@@ -39,6 +38,19 @@ conversationApp.post('/conversation', async (request, response) => {
     conversation,
   })
 })
+
+conversationApp.get(
+  '/organization/:uuid/conversations',
+  async (request, response) => {
+    // validate input @todo
+    const { uuid } = request.params
+    // look up prior conversation
+    const organization = await Organization.get(AppDataSource, uuid)
+    const conversations = await Conversation.list(AppDataSource, organization)
+
+    return response.json({ conversations })
+  },
+)
 
 conversationApp.get('/conversation/:uuid', async (request, response) => {
   // validate input @todo

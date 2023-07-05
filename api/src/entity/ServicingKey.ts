@@ -1,4 +1,6 @@
 'use server'
+import { Organization } from '@/entity/Organization'
+import { Servicer } from '@/entity/Servicer'
 import {
   CreateDateColumn,
   Entity,
@@ -6,8 +8,6 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm'
-import { Organization } from './Organization'
-import { Servicer } from './Servicer'
 
 @Entity()
 export class ServicingKey {

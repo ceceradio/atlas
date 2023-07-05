@@ -1,17 +1,18 @@
 'use server'
+import { Message } from '@/entity/Message'
+import { Organization } from '@/entity/Organization'
+import { User } from '@/entity/User'
 import {
   CreateDateColumn,
   DataSource,
   Entity,
+  Equal,
   JoinColumn,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   Relation,
 } from 'typeorm'
-import { Message } from './Message'
-import { Organization } from './Organization'
-import { User } from './User'
 
 @Entity()
 export class Conversation {
@@ -41,6 +42,15 @@ export class Conversation {
       organization: creator.organization,
     })
     return await dataSource.getRepository(Conversation).save(conversation)
+  }
+
+  static async list(dataSource: DataSource, organization: Organization) {
+    return dataSource.getRepository(Conversation).find({
+      where: { organization: Equal(organization) },
+      order: {
+        created: 'ASC',
+      },
+    })
   }
 
   static async get(dataSource: DataSource, uuid: string) {
