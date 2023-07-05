@@ -5,6 +5,7 @@ import { Message } from '@/entity/Message'
 import { Organization } from '@/entity/Organization'
 import { User } from '@/entity/User'
 import express from 'express'
+import { AtlasError } from './errors'
 
 export const conversationApp = express()
 function getFullOpenAIMessages(conversation: Conversation) {
@@ -68,7 +69,7 @@ conversationApp.patch('/conversation/:uuid', async (request, response) => {
   const { content }: ConversationPatchBody = await request.body
   const { uuid } = request.params
   if (!content)
-    throw new Error('content of message in post body cannot be empty')
+    throw new AtlasError('content of message in post body cannot be empty')
   // look up prior conversation
   const conversation = await Conversation.get(AppDataSource, uuid)
   // create message from user and save to database

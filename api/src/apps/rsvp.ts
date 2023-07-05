@@ -3,6 +3,7 @@ import { AuthProfile, AuthProviders } from '@/entity/AuthProfile'
 import { User } from '@/entity/User'
 import express from 'express'
 import { checkJwt } from './auth'
+import { AtlasError } from './errors'
 
 export const inviteApp = express()
 
@@ -10,15 +11,15 @@ type RSVPPostBody = {
   inviteCode: string
   provider: AuthProviders
 }
+
 inviteApp.post('/rsvp', checkJwt, async (request, response) => {
   const { inviteCode, provider }: RSVPPostBody = await request.body
-  console.log(inviteCode, provider)
   // @todo remove hack lol
   const providerId = '' + request.auth?.payload?.aud
-  if (!providerId) throw new Error()
-  if (!inviteCode) throw new Error()
+  if (!providerId) throw new AtlasError()
+  if (!inviteCode) throw new AtlasError()
   const user = await User.getByInvite(AppDataSource, inviteCode)
-  if (!user) throw new Error()
+  if (!user) throw new AtlasError()
 
   await AuthProfile.create(AppDataSource, user, provider, providerId)
 

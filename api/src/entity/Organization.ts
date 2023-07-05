@@ -1,4 +1,5 @@
 'use server'
+import { AtlasError } from '@/apps/errors'
 import { Conversation } from '@/entity/Conversation'
 import { Depository } from '@/entity/Depository'
 import { ServicingKey } from '@/entity/ServicingKey'
@@ -47,7 +48,7 @@ export class Organization {
         created: 'ASC',
       },
     })
-    if (!organization) throw new Error()
+    if (!organization) throw new AtlasError()
     return organization
   }
 

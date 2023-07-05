@@ -1,4 +1,5 @@
 'use server'
+import { AtlasError } from '@/apps/errors'
 import { User } from '@/entity/User'
 import {
   Column,
@@ -62,7 +63,7 @@ export class AuthProfile {
         user: true,
       },
     })
-    if (!authProfile) throw new Error()
+    if (!authProfile) throw new AtlasError()
     return authProfile.user
   }
 }

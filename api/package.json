@@ -14,7 +14,7 @@
     "@types/minimist": "^1.2.2",
     "body-parser": "^1.20.2",
     "dotenv": "^16.3.1",
-    "express": "^4.18.2",
+    "express": "^5.0.0-beta.1",
     "express-oauth2-jwt-bearer": "^1.5.0",
     "express-openid-connect": "^2.16.0",
     "minimist": "^1.2.8",
