@@ -43,7 +43,7 @@ export class User {
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP(6)',
   })
-  public createdAt: Date
+  public created: Date
 
   static async create(dataSource: DataSource, organization: Organization) {
     const user = dataSource.getRepository(User).create({
@@ -75,5 +75,16 @@ export class User {
       },
     })
     return user
+  }
+
+  static async list(dataSource: DataSource) {
+    return dataSource.getRepository(User).find({
+      order: {
+        created: 'ASC',
+      },
+      relations: {
+        authProfiles: true,
+      },
+    })
   }
 }

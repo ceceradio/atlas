@@ -14,8 +14,7 @@ type RSVPPostBody = {
 
 inviteApp.post('/rsvp', checkJwt, async (request, response) => {
   const { inviteCode, provider }: RSVPPostBody = await request.body
-  // @todo remove hack lol
-  const providerId = '' + request.auth?.payload?.aud
+  const providerId = request.auth?.payload?.sub
   if (!providerId) throw new AtlasError()
   if (!inviteCode) throw new AtlasError()
   const user = await User.getByInvite(AppDataSource, inviteCode)
