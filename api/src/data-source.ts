@@ -6,12 +6,12 @@ import { Depository } from '@/entity/Depository'
 import { Message } from '@/entity/Message'
 import { Organization } from '@/entity/Organization'
 import { Servicer } from '@/entity/Servicer'
-import { ServicerAuthMethod } from '@/entity/ServicerAuthMethod'
+import { ServicerAuthProfile } from '@/entity/ServicerAuthProfile'
 import { ServicingKey } from '@/entity/ServicingKey'
 import { User } from '@/entity/User'
 import { DataSource } from 'typeorm'
 
-export const AppDataSource = new DataSource({
+export const postgres = new DataSource({
   type: 'postgres',
   host: 'localhost',
   port: 5432,
@@ -24,7 +24,7 @@ export const AppDataSource = new DataSource({
     Depository,
     Organization,
     Servicer,
-    ServicerAuthMethod,
+    ServicerAuthProfile,
     ServicingKey,
     AuthProfile,
     User,
@@ -34,7 +34,7 @@ export const AppDataSource = new DataSource({
   migrations: ['./migration/*.{js,ts}'],
   subscribers: [],
 })
-const initializePromise = AppDataSource.initialize()
+const initializePromise = postgres.initialize()
 export async function getDataSource() {
   return await initializePromise
 }

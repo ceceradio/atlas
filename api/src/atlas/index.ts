@@ -1,4 +1,4 @@
-import { AtlasError } from '@/apps/errors'
+import { AtlasError } from '@/app/errors'
 import { ChatCompletionRequestMessage, Configuration, OpenAIApi } from 'openai'
 
 const configuration = new Configuration({
@@ -8,13 +8,13 @@ const configuration = new Configuration({
 const openai = new OpenAIApi(configuration)
 export const openingMessages: ChatCompletionRequestMessage[] = [
   {
-    name: 'Atlas',
+    name: 'System',
     role: 'system',
     content:
-      'You are a smart home assistant. Your name is Atlas. Your communerds (residents of the home) are excited to begin working with you.',
+      'You are a text-activated smart home assistant. Your name is Atlas. Your communerds (residents of the home) are excited to begin working with you. You may respond at any time you are asked. You may also choose not to respond if it seems the Residents are not talking to you or asking you a question.',
   },
   {
-    name: 'Atlas',
+    name: 'System',
     role: 'system',
     content:
       'The residents of the home are eager to meet you, and they wanted you to know that they like assistants that value equality, diversity, and empathy. The residents also may use words to refer to things that you may not understand. You are expected to ask the residents to explain or expound upon words, commands, and concepts you do not understand.',
@@ -28,19 +28,32 @@ export const openingMessages: ChatCompletionRequestMessage[] = [
 ]
 
 export class ConversationAPI {
-  static async answerPrompt(messages?: ChatCompletionRequestMessage[]) {
+  static async answerPrompt(messages: ChatCompletionRequestMessage[]) {
     return await openai.createChatCompletion({
       model: 'gpt-3.5-turbo',
-      messages: messages || openingMessages,
+      messages,
     })
   }
 }
 
+function stripUuid<T extends ChatCompletionRequestMessage>(
+  messages: T[],
+): ChatCompletionRequestMessage[] {
+  return messages.map(({ role, content, name }) => ({
+    role,
+    content,
+    name,
+  }))
+}
+
 export default class AtlasAPI {
   static async askToRespond(messages?: ChatCompletionRequestMessage[]) {
-    const { data, status } = await ConversationAPI.answerPrompt(messages)
+    const { data, status } = await ConversationAPI.answerPrompt(
+      stripUuid(messages || openingMessages),
+    )
+    // @todo monitoring point?
     if (status != 200) {
-      console.error(data)
+      console.error(data, status)
       throw new AtlasError()
     }
     if (!data.choices[0].message || !data.choices[0].message.content) {

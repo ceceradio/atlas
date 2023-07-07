@@ -3,6 +3,11 @@ import { AuthProfile } from '@/entity/AuthProfile'
 import { Conversation } from '@/entity/Conversation'
 import { Message } from '@/entity/Message'
 import { Organization } from '@/entity/Organization'
+import { IAuthProfile } from '@/interface/AuthProfile'
+import { IConversation } from '@/interface/Conversation'
+import { IMessage } from '@/interface/Message'
+import { IOrganization } from '@/interface/Organization'
+import { IUser } from '@/interface/User'
 import {
   Column,
   CreateDateColumn,
@@ -18,22 +23,22 @@ import {
 } from 'typeorm'
 
 @Entity()
-export class User {
+export class User implements IUser {
   @PrimaryGeneratedColumn('uuid')
   uuid: string
 
   @ManyToOne(() => Organization, (organization) => organization.users)
   @JoinColumn()
-  organization: Organization
+  organization: IOrganization
 
   @OneToMany(() => Conversation, (conversation) => conversation.creator)
-  createdConversations: Relation<Conversation>[]
+  createdConversations: Promise<Relation<IConversation>[]>
 
   @OneToMany(() => Message, (message) => message.author)
-  authoredMessages: Relation<Message>[]
+  authoredMessages: Promise<Relation<IMessage>[]>
 
   @OneToMany(() => AuthProfile, (authProfile) => authProfile.user)
-  authProfiles: Relation<AuthProfile>[]
+  authProfiles: Relation<IAuthProfile>[]
 
   @Column()
   @Index()
@@ -43,9 +48,9 @@ export class User {
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP(6)',
   })
-  public createdAt: Date
+  public created: Date
 
-  static async create(dataSource: DataSource, organization: Organization) {
+  static async create(dataSource: DataSource, organization: IOrganization) {
     const user = dataSource.getRepository(User).create({
       organization,
     })
@@ -75,5 +80,16 @@ export class User {
       },
     })
     return user
+  }
+
+  static async list(dataSource: DataSource) {
+    return dataSource.getRepository(User).find({
+      order: {
+        created: 'ASC',
+      },
+      relations: {
+        authProfiles: true,
+      },
+    })
   }
 }

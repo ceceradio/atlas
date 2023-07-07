@@ -1,9 +1,10 @@
 'use server'
-import { AtlasError } from '@/apps/errors'
 import { Conversation } from '@/entity/Conversation'
 import { Depository } from '@/entity/Depository'
 import { ServicingKey } from '@/entity/ServicingKey'
 import { User } from '@/entity/User'
+import { IOrganization } from '@/interface/Organization'
+import { IServicingKey } from '@/interface/ServicingKey'
 import {
   CreateDateColumn,
   DataSource,
@@ -14,18 +15,18 @@ import {
 } from 'typeorm'
 
 @Entity()
-export class Organization {
+export class Organization implements IOrganization {
   @PrimaryGeneratedColumn('uuid')
   uuid: string
 
   @OneToMany(() => ServicingKey, (servicingKey) => servicingKey.organization)
-  servicingKeys: Relation<ServicingKey>[]
+  servicingKeys: Promise<Relation<IServicingKey>[]>
 
   @OneToMany(() => User, (user) => user.organization)
-  users: Relation<User>[]
+  users: Promise<Relation<User>[]>
 
   @OneToMany(() => Depository, (depository) => depository.organization)
-  depositories: Relation<Depository>[]
+  depositories: Promise<Relation<Depository>[]>
 
   @OneToMany(() => Conversation, (conversation) => conversation.organization)
   conversations: Relation<Conversation>[]
@@ -34,7 +35,7 @@ export class Organization {
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP(6)',
   })
-  public created: Date
+  created: Date
 
   static async create(AppDataSource: DataSource) {
     const organization = AppDataSource.getRepository(Organization).create()
@@ -48,7 +49,6 @@ export class Organization {
         created: 'ASC',
       },
     })
-    if (!organization) throw new AtlasError()
     return organization
   }
 

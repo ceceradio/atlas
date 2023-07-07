@@ -1,8 +1,7 @@
-import { AppDataSource } from '@/data-source'
+import { postgres } from '@/data-source'
 import { AuthProfile } from '@/entity/AuthProfile'
 import express from 'express'
 import { auth } from 'express-oauth2-jwt-bearer'
-import { AtlasError } from './errors'
 
 const { AUTH0_AUDIENCE, AUTH0_DOMAIN } = process.env
 
@@ -16,15 +15,16 @@ export const checkJwt = auth(config)
 export const authorize: express.Handler = (request, response, next) => {
   checkJwt(request, response, () => {
     const providerId = request.auth?.payload?.sub
-    if (!providerId) throw new AtlasError('401')
-    AuthProfile.getUser(AppDataSource, 'auth0', providerId)
+    if (!providerId) return response.status(400)
+    AuthProfile.getUser(postgres, 'auth0', providerId)
       .then((user) => {
         response.locals.user = user
         next()
       })
       .catch((e) => {
         console.error(e)
-        throw new AtlasError('401')
+        //throw new AtlasError('401')
+        return response.status(401)
       })
   })
 }
@@ -32,6 +32,6 @@ export const authorize: express.Handler = (request, response, next) => {
 export const authApp = express()
 
 authApp.get('/whoami', checkJwt, (request, response) => {
-  const userId = request.auth?.payload?.sub
-  return response.json({ userId })
+  const providerId = request.auth?.payload?.sub
+  return response.json({ providerId })
 })

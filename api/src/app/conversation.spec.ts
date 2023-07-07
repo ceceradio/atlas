@@ -20,7 +20,7 @@ describe('apps/conversation.ts/GET', () => {
     const organization = await Organization.create(dataSource)
     const user = await User.create(dataSource, organization)
     const conversation = await Conversation.create(dataSource, user)
-    await Message.create(dataSource, conversation, user, 'foobar')
+    await Message.create(dataSource, conversation, user, 'foobar', false)
     request(conversationApp)
       .get(`/conversation/${conversation.uuid}`)
       .expect(200)

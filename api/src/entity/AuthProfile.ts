@@ -1,12 +1,14 @@
 'use server'
-import { AtlasError } from '@/apps/errors'
 import { User } from '@/entity/User'
+import { IAuthProfile } from '@/interface/AuthProfile'
+import { IUser } from '@/interface/User'
 import {
   Column,
   CreateDateColumn,
   DataSource,
   Entity,
   Equal,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -15,25 +17,26 @@ import {
 export type AuthProviders = 'auth0'
 
 @Entity()
-export class AuthProfile {
+export class AuthProfile implements IAuthProfile {
   @PrimaryGeneratedColumn('uuid')
   uuid: string
 
   @ManyToOne(() => User, (user) => user.authProfiles)
   @JoinColumn()
-  user: User
+  user: IUser
 
   @Column()
   provider: AuthProviders
 
   @Column()
+  @Index({ unique: true })
   providerId: string
 
   @CreateDateColumn({
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP(6)',
   })
-  public createdAt: Date
+  public created: Date
 
   static async create(
     dataSource: DataSource,
@@ -53,7 +56,7 @@ export class AuthProfile {
     dataSource: DataSource,
     provider: AuthProviders,
     providerId: string,
-  ) {
+  ): Promise<IUser | undefined> {
     const [authProfile] = await dataSource.getRepository(AuthProfile).find({
       where: {
         provider: Equal(provider),
@@ -63,7 +66,8 @@ export class AuthProfile {
         user: true,
       },
     })
-    if (!authProfile) throw new AtlasError()
+
+    if (!authProfile) return
     return authProfile.user
   }
 }

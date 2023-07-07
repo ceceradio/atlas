@@ -1,9 +1,11 @@
 'use client'
 
 import { useAuth0 } from '@auth0/auth0-react'
+import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
 export default function Login() {
+  const router = useRouter()
   const {
     isLoading,
     isAuthenticated,
@@ -18,7 +20,6 @@ export default function Login() {
     const callApi = async () => {
       const token = await getAccessTokenSilently({
         authorizationParams: {
-          audience: 'https://local.atlas.zone', // Value in Identifier field for the API being called.
           scope: 'self', // Scope that exists for the API being called. You can create these through the Auth0 Management API or through the Auth0 Dashboard in the Permissions view of your API.
         },
       })
@@ -27,11 +28,15 @@ export default function Login() {
           Authorization: `Bearer ${token}`,
         },
       })
-      console.log(response.json())
+      const { user } = await response.json()
+      if (user && user.inviteCode)
+        router.push(`/rsvp?inviteCode=${user.inviteCode}`)
+      else router.push(`/zone`)
     }
 
-    if (isAuthenticated) callApi()
-  }, [isAuthenticated, getAccessTokenSilently])
+    if (isAuthenticated && router && getAccessTokenSilently !== undefined)
+      callApi()
+  }, [isAuthenticated, router, getAccessTokenSilently])
 
   if (isLoading) {
     return <div>Loading...</div>
@@ -47,6 +52,12 @@ export default function Login() {
       </div>
     )
   } else {
-    return <button onClick={() => loginWithRedirect()}>Log in</button>
+    return (
+      <button
+        onClick={() => loginWithRedirect({ appState: { type: 'login' } })}
+      >
+        Log in
+      </button>
+    )
   }
 }

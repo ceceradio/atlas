@@ -1,9 +1,13 @@
 'use server'
-import { AtlasError } from '@/apps/errors'
 import { Message } from '@/entity/Message'
 import { Organization } from '@/entity/Organization'
 import { User } from '@/entity/User'
+import { IConversation } from '@/interface/Conversation'
+import { IMessage } from '@/interface/Message'
+import { IOrganization } from '@/interface/Organization'
+import { IUser } from '@/interface/User'
 import {
+  Column,
   CreateDateColumn,
   DataSource,
   Entity,
@@ -16,20 +20,23 @@ import {
 } from 'typeorm'
 
 @Entity()
-export class Conversation {
+export class Conversation implements IConversation {
   @PrimaryGeneratedColumn('uuid')
   uuid: string
 
+  @Column({ default: 'New Conversation' })
+  title: string
+
   @ManyToOne(() => User, (user) => user.createdConversations)
   @JoinColumn()
-  creator: User
+  creator: IUser
 
   @ManyToOne(() => Organization, (organization) => organization.conversations)
   @JoinColumn()
-  organization: Organization
+  organization: IOrganization
 
   @OneToMany(() => Message, (message) => message.conversation)
-  messages: Relation<Message>[]
+  messages: Relation<IMessage>[]
 
   @CreateDateColumn({
     type: 'timestamp',
@@ -45,16 +52,31 @@ export class Conversation {
     return await dataSource.getRepository(Conversation).save(conversation)
   }
 
-  static async list(dataSource: DataSource, organization: Organization) {
+  static async listByOrganization(
+    dataSource: DataSource,
+    organization: Organization,
+  ) {
     return dataSource.getRepository(Conversation).find({
       where: { organization: Equal(organization) },
       order: {
-        created: 'ASC',
+        created: 'DESC',
       },
     })
   }
 
-  static async get(dataSource: DataSource, uuid: string) {
+  static async listByCreator(dataSource: DataSource, creator: User) {
+    return dataSource.getRepository(Conversation).find({
+      where: { creator: Equal(creator.uuid) },
+      order: {
+        created: 'DESC',
+      },
+    })
+  }
+
+  static async get(
+    dataSource: DataSource,
+    uuid: string,
+  ): Promise<IConversation | undefined> {
     const [conversation] = await dataSource.getRepository(Conversation).find({
       where: { uuid },
       order: {
@@ -64,7 +86,6 @@ export class Conversation {
         messages: true,
       },
     })
-    if (!conversation) throw new AtlasError()
     return conversation
   }
 }

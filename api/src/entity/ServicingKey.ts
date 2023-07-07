@@ -1,6 +1,9 @@
 'use server'
 import { Organization } from '@/entity/Organization'
 import { Servicer } from '@/entity/Servicer'
+import { IOrganization } from '@/interface/Organization'
+import { IServicer } from '@/interface/Servicer'
+import { IServicingKey } from '@/interface/ServicingKey'
 import {
   CreateDateColumn,
   Entity,
@@ -10,21 +13,21 @@ import {
 } from 'typeorm'
 
 @Entity()
-export class ServicingKey {
+export class ServicingKey implements IServicingKey {
   @PrimaryGeneratedColumn('uuid')
   uuid: string
 
   @ManyToOne(() => Organization, (organization) => organization.users)
   @JoinColumn()
-  organization: Organization
+  organization: IOrganization
 
   @ManyToOne(() => Servicer, (servicer) => servicer.servicingKeys)
   @JoinColumn()
-  servicer: Servicer
+  servicer: IServicer
 
   @CreateDateColumn({
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP(6)',
   })
-  public createdAt: Date
+  created: Date
 }
