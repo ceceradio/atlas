@@ -1,6 +1,9 @@
 'use server'
-import { ServicerAuthMethod } from '@/entity/ServicerAuthMethod'
+import { ServicerAuthProfile } from '@/entity/ServicerAuthProfile'
 import { ServicingKey } from '@/entity/ServicingKey'
+import { IServicer } from '@/interface/Servicer'
+import { IServicerAuthProfile } from '@/interface/ServicerAuthProfile'
+import { IServicingKey } from '@/interface/ServicingKey'
 import {
   Column,
   CreateDateColumn,
@@ -12,7 +15,7 @@ import {
 } from 'typeorm'
 
 @Entity()
-export class Servicer {
+export class Servicer implements IServicer {
   @PrimaryGeneratedColumn('uuid')
   uuid: string
 
@@ -20,11 +23,11 @@ export class Servicer {
   @Column()
   email: string
 
-  @OneToMany(() => ServicerAuthMethod, (authMethod) => authMethod.servicer)
-  authMethods: Relation<ServicerAuthMethod>[]
+  @OneToMany(() => ServicerAuthProfile, (authProfile) => authProfile.servicer)
+  authProfiles: Promise<Relation<IServicerAuthProfile>[]>
 
   @OneToMany(() => ServicingKey, (servicingKey) => servicingKey.servicer)
-  servicingKeys: Relation<ServicingKey>[]
+  servicingKeys: Promise<Relation<IServicingKey>[]>
 
   @CreateDateColumn({
     type: 'timestamp',

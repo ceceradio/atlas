@@ -20,7 +20,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@atlas/api": ["../api/src"]
     },
     "emitDecoratorMetadata": true,
     "strictPropertyInitialization": false,
