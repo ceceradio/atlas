@@ -2,7 +2,7 @@ import { AtlasError } from '@/app/errors'
 import { ChatCompletionRequestMessage, Configuration, OpenAIApi } from 'openai'
 
 const configuration = new Configuration({
-  organization: 'org-FzAKGmdFjXJUOnWcraPLaTJr',
+  organization: process.env.OPENAI_ORG,
   apiKey: process.env.OPENAI_API_KEY,
 })
 const openai = new OpenAIApi(configuration)
@@ -20,30 +20,20 @@ export const openingMessages: ChatCompletionRequestMessage[] = [
       'The residents of the home are eager to meet you, and they wanted you to know that they like assistants that value equality, diversity, and empathy. The residents also may use words to refer to things that you may not understand. You are expected to ask the residents to explain or expound upon words, commands, and concepts you do not understand.',
   },
   {
-    role: 'user',
     name: 'Residents',
+    role: 'user',
     content:
       "Hello! We're the residents of this home. We love cats, music, and DIY. Could you tell us a little bit about yourself?",
   },
 ]
 
-export class ConversationAPI {
+class ConversationAPI {
   static async answerPrompt(messages: ChatCompletionRequestMessage[]) {
     return await openai.createChatCompletion({
       model: 'gpt-3.5-turbo',
       messages,
     })
   }
-}
-
-function stripUuid<T extends ChatCompletionRequestMessage>(
-  messages: T[],
-): ChatCompletionRequestMessage[] {
-  return messages.map(({ role, content, name }) => ({
-    role,
-    content,
-    name,
-  }))
 }
 
 export default class AtlasAPI {
@@ -59,6 +49,17 @@ export default class AtlasAPI {
     if (!data.choices[0].message || !data.choices[0].message.content) {
       throw new AtlasError('no message returned')
     }
+
     return data.choices[0].message.content
   }
+}
+
+function stripUuid<T extends ChatCompletionRequestMessage>(
+  messages: T[],
+): ChatCompletionRequestMessage[] {
+  return messages.map(({ role, content, name }) => ({
+    role,
+    content,
+    name,
+  }))
 }

@@ -1,6 +1,5 @@
 'use server'
 import { Servicer } from '@/entity/Servicer'
-import { IServicer } from '@/interface/Servicer'
 import { IServicerAuthProfile } from '@/interface/ServicerAuthProfile'
 import {
   Column,
@@ -27,7 +26,7 @@ export class ServicerAuthProfile implements IServicerAuthProfile {
 
   @ManyToOne(() => Servicer, (servicer) => servicer.authProfiles)
   @JoinColumn()
-  servicer: IServicer
+  servicer: Servicer
 
   @CreateDateColumn({
     type: 'timestamp',

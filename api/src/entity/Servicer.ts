@@ -2,8 +2,6 @@
 import { ServicerAuthProfile } from '@/entity/ServicerAuthProfile'
 import { ServicingKey } from '@/entity/ServicingKey'
 import { IServicer } from '@/interface/Servicer'
-import { IServicerAuthProfile } from '@/interface/ServicerAuthProfile'
-import { IServicingKey } from '@/interface/ServicingKey'
 import {
   Column,
   CreateDateColumn,
@@ -24,10 +22,10 @@ export class Servicer implements IServicer {
   email: string
 
   @OneToMany(() => ServicerAuthProfile, (authProfile) => authProfile.servicer)
-  authProfiles: Promise<Relation<IServicerAuthProfile>[]>
+  authProfiles: Promise<Relation<ServicerAuthProfile>[]>
 
   @OneToMany(() => ServicingKey, (servicingKey) => servicingKey.servicer)
-  servicingKeys: Promise<Relation<IServicingKey>[]>
+  servicingKeys: Promise<Relation<ServicingKey>[]>
 
   @CreateDateColumn({
     type: 'timestamp',

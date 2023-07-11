@@ -3,9 +3,6 @@ import { AuthProfile } from '@/entity/AuthProfile'
 import { Conversation } from '@/entity/Conversation'
 import { Message } from '@/entity/Message'
 import { Organization } from '@/entity/Organization'
-import { IAuthProfile } from '@/interface/AuthProfile'
-import { IConversation } from '@/interface/Conversation'
-import { IMessage } from '@/interface/Message'
 import { IOrganization } from '@/interface/Organization'
 import { IUser } from '@/interface/User'
 import {
@@ -29,16 +26,16 @@ export class User implements IUser {
 
   @ManyToOne(() => Organization, (organization) => organization.users)
   @JoinColumn()
-  organization: IOrganization
+  organization: Organization
 
   @OneToMany(() => Conversation, (conversation) => conversation.creator)
-  createdConversations: Promise<Relation<IConversation>[]>
+  createdConversations: Promise<Relation<Conversation>[]>
 
   @OneToMany(() => Message, (message) => message.author)
-  authoredMessages: Promise<Relation<IMessage>[]>
+  authoredMessages: Promise<Relation<Message>[]>
 
   @OneToMany(() => AuthProfile, (authProfile) => authProfile.user)
-  authProfiles: Relation<IAuthProfile>[]
+  authProfiles: Relation<AuthProfile>[]
 
   @Column()
   @Index()

@@ -1,9 +1,7 @@
 'use server'
 import { Conversation } from '@/entity/Conversation'
 import { User } from '@/entity/User'
-import { IConversation } from '@/interface/Conversation'
-import { IMessage } from '@/interface/Message'
-import { IUser } from '@/interface/User'
+import { AuthorTypes, IMessage } from '@/interface/Message'
 import { ChatCompletionRequestMessage } from 'openai'
 import {
   Column,
@@ -22,17 +20,17 @@ export class Message implements IMessage {
 
   @ManyToOne(() => User, (user) => user.authoredMessages)
   @JoinColumn()
-  author: IUser
+  author: User | null
 
   @ManyToOne(() => Conversation, (conversation) => conversation.messages)
   @JoinColumn()
-  conversation: IConversation
+  conversation: Conversation
 
   @Column()
   content: string
 
   @Column()
-  isAI: boolean
+  authorType: AuthorTypes
 
   @CreateDateColumn({
     type: 'timestamp',
@@ -41,10 +39,15 @@ export class Message implements IMessage {
   public created: Date
 
   toOpenAI(): ChatCompletionRequestMessage & { uuid: string } {
+    const names = {
+      system: 'System',
+      user: 'Residents',
+      assistant: 'Atlas',
+    }
     return {
       uuid: this.uuid,
-      role: this.author ? 'user' : 'assistant',
-      name: this.author ? 'Residents' : 'Atlas',
+      role: this.authorType,
+      name: names[this.authorType],
       content: this.content,
     }
   }
@@ -52,15 +55,15 @@ export class Message implements IMessage {
   static async create(
     AppDataSource: DataSource,
     conversation: Conversation,
-    author: User,
+    author: User | null,
+    authorType: AuthorTypes,
     content: string,
-    isAI: boolean,
   ) {
     const message = AppDataSource.getRepository(Message).create({
       conversation,
       author,
+      authorType,
       content,
-      isAI,
     })
     return await AppDataSource.getRepository(Message).save(message)
   }

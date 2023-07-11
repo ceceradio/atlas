@@ -1,7 +1,6 @@
 'use server'
 import { Organization } from '@/entity/Organization'
 import { IDepository } from '@/interface/Depository'
-import { IOrganization } from '@/interface/Organization'
 import {
   CreateDateColumn,
   Entity,
@@ -17,7 +16,7 @@ export class Depository implements IDepository {
 
   @ManyToOne(() => Organization, (organization) => organization.depositories)
   @JoinColumn()
-  organization: IOrganization
+  organization: Organization
 
   @CreateDateColumn({
     type: 'timestamp',
