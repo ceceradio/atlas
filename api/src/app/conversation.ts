@@ -5,7 +5,7 @@ import { Conversation } from '@/entity/Conversation'
 import { Message } from '@/entity/Message'
 import { IAPIConversation, IConversation } from '@/interface/Conversation'
 import { IUser } from '@/interface/User'
-import { retitleQueue } from '@/queues/retitle'
+import { retitleQueue } from '@/queue/retitle'
 import express from 'express'
 import { authorize } from './authorize'
 
@@ -81,7 +81,7 @@ async function performChatExchange(
 ): Promise<IAPIConversation> {
   if (!user) throw new AtlasError()
   if (content)
-    await Message.create(postgres, conversation, user, content, false)
+    await Message.create(postgres, conversation, user, 'user', content)
   // refresh
   conversation = (await Conversation.get(
     postgres,
@@ -92,8 +92,8 @@ async function performChatExchange(
     postgres,
     conversation,
     user,
+    'assistant',
     await AtlasAPI.askToRespond(getFullOpenAIMessages(conversation)),
-    true,
   )
   // refresh
   conversation = (await Conversation.get(

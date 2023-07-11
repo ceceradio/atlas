@@ -4,7 +4,6 @@ import { Depository } from '@/entity/Depository'
 import { ServicingKey } from '@/entity/ServicingKey'
 import { User } from '@/entity/User'
 import { IOrganization } from '@/interface/Organization'
-import { IServicingKey } from '@/interface/ServicingKey'
 import {
   CreateDateColumn,
   DataSource,
@@ -20,7 +19,7 @@ export class Organization implements IOrganization {
   uuid: string
 
   @OneToMany(() => ServicingKey, (servicingKey) => servicingKey.organization)
-  servicingKeys: Promise<Relation<IServicingKey>[]>
+  servicingKeys: Promise<Relation<ServicingKey>[]>
 
   @OneToMany(() => User, (user) => user.organization)
   users: Promise<Relation<User>[]>

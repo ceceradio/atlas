@@ -15,15 +15,21 @@ getDataSource()
   .then(async (dataSource) => {
     dataSourceHandle = dataSource
     if (command === 'registerUser') {
-      return registerUser(dataSource, argv.uuid)
+      return await registerUser(dataSource, argv.uuid)
     } else if (command === 'registerOrganization') {
-      return registerOrganization(dataSource)
+      return await registerOrganization(dataSource)
     } else if (command === 'listUsers') {
-      return listUsers(dataSource)
+      return await listUsers(dataSource)
     } else if (command === 'retitleConversation') {
-      return retitleConversation(dataSource, argv.uuid)
+      return await retitleConversation(dataSource, argv.uuid)
     }
-    await dataSource.destroy()
   })
   .then(console.info)
-  .then(() => dataSourceHandle.destroy())
+  .finally(() => {
+    dataSourceHandle
+      .destroy()
+      .then(() => process.exit(1))
+      .catch(() => {
+        /* no op */
+      })
+  })

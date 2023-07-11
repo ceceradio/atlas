@@ -1,8 +1,6 @@
 'use server'
 import { Organization } from '@/entity/Organization'
 import { Servicer } from '@/entity/Servicer'
-import { IOrganization } from '@/interface/Organization'
-import { IServicer } from '@/interface/Servicer'
 import { IServicingKey } from '@/interface/ServicingKey'
 import {
   CreateDateColumn,
@@ -19,11 +17,11 @@ export class ServicingKey implements IServicingKey {
 
   @ManyToOne(() => Organization, (organization) => organization.users)
   @JoinColumn()
-  organization: IOrganization
+  organization: Organization
 
   @ManyToOne(() => Servicer, (servicer) => servicer.servicingKeys)
   @JoinColumn()
-  servicer: IServicer
+  servicer: Servicer
 
   @CreateDateColumn({
     type: 'timestamp',

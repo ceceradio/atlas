@@ -23,7 +23,7 @@ export class AuthProfile implements IAuthProfile {
 
   @ManyToOne(() => User, (user) => user.authProfiles)
   @JoinColumn()
-  user: IUser
+  user: User
 
   @Column()
   provider: AuthProviders
@@ -63,7 +63,9 @@ export class AuthProfile implements IAuthProfile {
         providerId: Equal(providerId),
       },
       relations: {
-        user: true,
+        user: {
+          organization: true,
+        },
       },
     })
 

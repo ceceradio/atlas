@@ -3,15 +3,13 @@ import { Message } from '@/entity/Message'
 import { Organization } from '@/entity/Organization'
 import { User } from '@/entity/User'
 import { IConversation } from '@/interface/Conversation'
-import { IMessage } from '@/interface/Message'
-import { IOrganization } from '@/interface/Organization'
-import { IUser } from '@/interface/User'
 import {
   Column,
   CreateDateColumn,
   DataSource,
   Entity,
   Equal,
+  FindOptionsRelations,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -29,14 +27,14 @@ export class Conversation implements IConversation {
 
   @ManyToOne(() => User, (user) => user.createdConversations)
   @JoinColumn()
-  creator: IUser
+  creator: User
 
   @ManyToOne(() => Organization, (organization) => organization.conversations)
   @JoinColumn()
-  organization: IOrganization
+  organization: Organization
 
   @OneToMany(() => Message, (message) => message.conversation)
-  messages: Relation<IMessage>[]
+  messages: Relation<Message>[]
 
   @CreateDateColumn({
     type: 'timestamp',
@@ -76,6 +74,7 @@ export class Conversation implements IConversation {
   static async get(
     dataSource: DataSource,
     uuid: string,
+    relations?: FindOptionsRelations<Conversation>,
   ): Promise<IConversation | undefined> {
     const [conversation] = await dataSource.getRepository(Conversation).find({
       where: { uuid },
@@ -83,7 +82,11 @@ export class Conversation implements IConversation {
         created: 'ASC',
       },
       relations: {
-        messages: true,
+        ...relations,
+        organization: true,
+        messages: {
+          author: true,
+        },
       },
     })
     return conversation
