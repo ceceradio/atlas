@@ -35,11 +35,11 @@ const RSVPScreen = () => {
     const acceptInvitation = async () => {
       const token = await getAccessTokenSilently({
         authorizationParams: {
-          //audience: 'https://local.atlas.zone', // Value in Identifier field for the API being called.
+          //audience: 'https://local.atlasai.zone', // Value in Identifier field for the API being called.
           scope: 'self', // Scope that exists for the API being called. You can create these through the Auth0 Management API or through the Auth0 Dashboard in the Permissions view of your API.
         },
       })
-      const response = await fetch('https://local.atlas.zone/api/rsvp', {
+      const response = await fetch('https://local.atlasai.zone/api/rsvp', {
         body: JSON.stringify({
           provider: 'auth0',
           inviteCode,
@@ -50,7 +50,7 @@ const RSVPScreen = () => {
         },
         method: 'POST',
       })
-      const { user } = await response.json()
+      const user = await response.json()
 
       if (!user) throw new Error()
     }

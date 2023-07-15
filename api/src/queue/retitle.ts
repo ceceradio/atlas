@@ -10,7 +10,6 @@ type RetitleJobData = {
   uuid: string
 }
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 retitleQueue.process(async (job) => {
   const db = await getDataSource()
   const title = await retitleConversation(db, job.data.uuid)

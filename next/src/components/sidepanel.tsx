@@ -2,12 +2,14 @@ import { getConversations } from '@/client/conversatons'
 import useAtlasApi from '@/helpers/useAtlasApi'
 import useAtlasSocket from '@/helpers/useAtlasSocket'
 import { AtlasSocketMessage, IAPIConversation, IConversation } from '@atlas/api'
-import { Box, Button, Divider, VStack } from '@chakra-ui/react'
+import { Box, Button, Divider, Flex, VStack } from '@chakra-ui/react'
+import styled from '@emotion/styled'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
+import { PropsWithChildren, useCallback, useEffect, useState } from 'react'
 
 type SidePanelProps = {
   list: IConversation[]
+  showBack: boolean
 }
 export function SidePanel() {
   const { token } = useAtlasApi()
@@ -16,23 +18,31 @@ export function SidePanel() {
   const getList = useCallback(() => {
     if (token) getConversations(token).then(setList)
   }, [token])
+
   useEffect(() => {
     if (token) getList()
   }, [token, getList])
+
   useEffect(() => {
     const message = lastJsonMessage as AtlasSocketMessage<unknown>
     if (message && message.type === 'update') {
       getList()
     }
   }, [lastJsonMessage, getList])
-  return <SidePanelDisplay list={list} />
+
+  return <SidePanelDisplay list={list} showBack={true} />
 }
 
-function SidePanelDisplay({ list }: SidePanelProps) {
+function SidePanelDisplay({ showBack, list }: SidePanelProps) {
   const router = useRouter()
 
   return (
-    <VStack>
+    <VStack alignItems="flex-end">
+      {showBack && (
+        <Box>
+          <Button onClick={() => router.push(`/zone`)}>Back</Button>
+        </Box>
+      )}
       {list.length &&
         list.slice(0, 5).map((conversation) => {
           const { uuid, title } = conversation
@@ -45,10 +55,36 @@ function SidePanelDisplay({ list }: SidePanelProps) {
           )
         })}
       <Divider />
-      <Box>
-        <Button onClick={() => router.push(`/zone`)}>Back to the Zone</Button>
-      </Box>
       <Box alignSelf="bottom">Settings</Box>
     </VStack>
   )
 }
+
+export function SidePanelPage({ children }: PropsWithChildren) {
+  const [slidden, setMobileHidden] = useState(true)
+  return (
+    <Flex>
+      <SlideBoxContainer
+        onClick={() => setMobileHidden(!slidden)}
+        slidden={slidden}
+      >
+        <SlideBox slidden={slidden}>
+          <SidePanel />
+        </SlideBox>
+      </SlideBoxContainer>
+      <Box flex="1">{children}</Box>
+    </Flex>
+  )
+}
+
+const SlideBox = styled.div(({ slidden }: { slidden: boolean }) => ({
+  background: '#ddd',
+  height: '100vh',
+  width: '350px',
+  transform: `translateX(${slidden ? '-300px' : '0'})`,
+  transition: 'width 333ms ease-in-out, transform 333ms ease-in-out',
+}))
+
+const SlideBoxContainer = styled.div(({ slidden }: { slidden: boolean }) => ({
+  width: `${slidden ? '50px' : '350px'}`,
+}))

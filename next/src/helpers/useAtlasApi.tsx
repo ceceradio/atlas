@@ -4,11 +4,11 @@ import { useCallback, useEffect, useState } from 'react'
 
 export default function useAtlasApi() {
   const { getAccessTokenSilently, logout } = useAuth0()
-  const [token, setToken] = useState<string | null>(null)
+  const [token, setToken] = useState<string>('')
   const [error, setError] = useState<Error | null>(null)
   const reset = useCallback(() => {
     setError(null)
-    setToken(null)
+    setToken('')
     logout()
   }, [logout])
   useEffect(() => {
@@ -16,7 +16,7 @@ export default function useAtlasApi() {
       getAccessTokenSilently().then(setToken).catch(setError)
   }, [setToken, setError, getAccessTokenSilently, token, error])
   useEffect(() => {
-    if (error) setToken(null)
+    if (error) setToken('')
   }, [error])
   return { token, error, reset, getAccessTokenSilently }
 }

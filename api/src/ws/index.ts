@@ -2,9 +2,12 @@ import { messageOrganizationQueue } from '@/queue/messageOrganization'
 import { RawData, Server } from 'ws'
 import { Antennae } from './Antennae'
 import { UserSocket } from './UserSocket'
+import { identify } from './identify'
+import { joined } from './joined'
+import { update } from './update'
 
 export type AtlasSocketMessage<T> = {
-  type: 'update' | 'identify' | 'identified'
+  type: 'update' | 'identify' | 'identified' | 'joined'
 } & T
 export type Identify = {
   token: string
@@ -12,6 +15,9 @@ export type Identify = {
 export type Update = {
   entity: string
   uuid: string
+}
+export type Joined = {
+  conversationId: string
 }
 
 export const organizationAntennae: Record<string, Antennae> = {}
@@ -25,6 +31,9 @@ wsServer.on('connection', (socket) => {
     parseMessage(
       requireIdentification(userSocket, (parsedMessage) => {
         const { type } = parsedMessage
+        /* ADD NEW FUNCTIONS HERE */
+        if (type === 'joined')
+          return joined(userSocket, parsedMessage as AtlasSocketMessage<Joined>)
         if (type === 'update')
           return update(userSocket, parsedMessage as AtlasSocketMessage<Update>)
       }),
@@ -56,38 +65,13 @@ function parseMessage<T>(fn: (parsedMessage: AtlasSocketMessage<object>) => T) {
   }
 }
 
-async function identify(
-  socket: UserSocket,
-  message: AtlasSocketMessage<Identify>,
-) {
-  const verified = await socket.identify(message.token)
-  if (!verified) {
-    console.error('not verified')
-    return socket.close()
-  }
-  // add to organization dictionary
-  const organizationUuid = socket.user?.organization?.uuid
-  if (!organizationUuid) {
-    console.error('no organization uuid')
-    return socket.close()
-  }
-  if (!organizationAntennae[organizationUuid])
-    organizationAntennae[organizationUuid] = new Antennae()
-  organizationAntennae[organizationUuid].clients.add(socket)
-}
-
-async function update(socket: UserSocket, message: AtlasSocketMessage<Update>) {
-  if (socket.isIdentified())
-    routeToOrganization(socket.organization?.uuid, message)
-}
-
 messageOrganizationQueue.process(async (job) => {
   const { uuid, message } = job.data
   await routeToOrganization(uuid, message)
   return true
 })
 
-async function routeToOrganization<T>(
+export async function routeToOrganization<T>(
   uuid: string | undefined,
   message: AtlasSocketMessage<T>,
 ) {

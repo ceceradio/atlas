@@ -1,8 +1,11 @@
 'use server'
 import { Conversation } from '@/entity/Conversation'
 import { User } from '@/entity/User'
-import { AuthorTypes, IMessage } from '@/interface/Message'
-import { ChatCompletionRequestMessage } from 'openai'
+import {
+  AuthorTypes,
+  ChatCompletionRequestMessageWithUuid,
+  IMessage,
+} from '@/interface/Message'
 import {
   Column,
   CreateDateColumn,
@@ -38,7 +41,7 @@ export class Message implements IMessage {
   })
   public created: Date
 
-  toOpenAI(): ChatCompletionRequestMessage & { uuid: string } {
+  toOpenAI(): ChatCompletionRequestMessageWithUuid {
     const names = {
       system: 'System',
       user: 'Residents',
