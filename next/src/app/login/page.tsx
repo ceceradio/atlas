@@ -20,7 +20,7 @@ export default function Login() {
     const callApi = async () => {
       const token = await getAccessTokenSilently({
         authorizationParams: {
-          scope: 'self', // Scope that exists for the API being called. You can create these through the Auth0 Management API or through the Auth0 Dashboard in the Permissions view of your API.
+          scope: process.env.NEXT_PUBLIC_AUTH0_SCOPE,
         },
       })
       const response = await fetch('https://local.atlasai.zone/api/whoami', {
@@ -35,8 +35,7 @@ export default function Login() {
       else router.push(`/zone`)
     }
 
-    if (isAuthenticated && router && getAccessTokenSilently !== undefined)
-      callApi()
+    if (isAuthenticated && router) callApi()
   }, [isAuthenticated, router, getAccessTokenSilently])
 
   if (isLoading) {

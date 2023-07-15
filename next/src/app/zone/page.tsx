@@ -1,6 +1,6 @@
 'use client'
-import { ConversationPanel } from '@/components/conversation'
-import { SidePanelPage } from '@/components/sidepanel'
+import { ConversationPanel } from '@/components/Conversation'
+import { SidePanelPage } from '@/components/SidePanel'
 import withAuth from '@/helpers/withAuth'
 
 function Zone() {

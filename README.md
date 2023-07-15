@@ -4,6 +4,12 @@ atlas, a world carrying environment
 
 local.atlasai.zone
 
+# folder structure
+
+/
+-/api (express)
+-/next ()
+
 # requirements
 
 nvm
@@ -18,7 +24,8 @@ ext eslint
 2. `npm run setup`
 3. prepare an auth0 app/api and openai key
 4. create and fill `./api/.env` (create it by copying `./api/.env.template`)
-5. `npm start`
+5. create and fill `./next/.env.local` (create it by copying `./next/.env.template`)
+6. `npm start`
 
 # creating an organization and user from scratch
 
