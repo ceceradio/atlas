@@ -2,7 +2,7 @@
   "name": "atlas",
   "type": "module",
   "version": "1.0.0",
-  "description": "atlas AI assistant monorepo",
+  "description": "atlas AI monorepo",
   "scripts": {
     "prestart": "docker compose up -d",
     "reset": "docker compose down --volumes",
