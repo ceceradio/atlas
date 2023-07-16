@@ -11,7 +11,7 @@ export type IMessage = {
   created: Date
   toOpenAI(): ChatCompletionRequestMessageWithUuid
 }
-export type AuthorTypes = 'user' | 'assistant' | 'system'
+export type AuthorTypes = 'user' | 'assistant' | 'system' | 'function'
 
 export type ChatCompletionRequestMessageWithUuid =
   ChatCompletionRequestMessage & { uuid: string }
