@@ -2,27 +2,6 @@
 
 atlas, a world carrying environment
 
-# folder map
-
-hopefully this map helps you find your way.
-
-```
-/
--/api (express)
---/src
----/app (express apps)
----/atlas (atlas API functions)
----/cli (cli commmands)
----/entity (typeorm entities)
----/interface (ts types for typeorm, exported by package)
----/migration (generated, probably dont need to change)
----/queue (bull queues)
----/ws (websocket server)
----datasource.ts (postgres connection)
--/next (what it says on the tin)
--/nginx (configuration)
-```
-
 # requirements
 
 nvm
@@ -53,6 +32,27 @@ this is too early for production, but if you were going to run it in production 
 2. `npx ts-node ./src/cli registerOrganization`
 3. use string from above command as input to `npx ts-node ./src/cli registerUser --uuid=`
 4. follow the link in the terminal and use auth0 to log in.
+
+# folder map
+
+hopefully this map helps you find your way.
+
+```
+/
+-/api (express)
+--/src
+---/app (express apps)
+---/atlas (atlas API functions)
+---/cli (cli commmands)
+---/entity (typeorm entities)
+---/interface (ts types for typeorm, exported by package)
+---/migration (generated, probably dont need to change)
+---/queue (bull queues)
+---/ws (websocket server)
+---datasource.ts (postgres connection)
+-/next (what it says on the tin)
+-/nginx (configuration)
+```
 
 # migrations
 
