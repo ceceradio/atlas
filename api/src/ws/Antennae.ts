@@ -1,3 +1,4 @@
+import { CLOSED } from 'ws'
 import type { AtlasSocketMessage } from '.'
 import { UserSocket } from './UserSocket'
 
@@ -10,6 +11,7 @@ export class Antennae {
       userSocket.socket.send(JSON.stringify(message), (err) => {
         if (err) {
           this.clients.delete(userSocket)
+          if (userSocket.socket.readyState === CLOSED) return
           console.debug('encountered turbulence', err)
           userSocket.close()
         }

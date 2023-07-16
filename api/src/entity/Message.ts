@@ -46,6 +46,7 @@ export class Message implements IMessage {
       system: 'System',
       user: 'Residents',
       assistant: 'Atlas',
+      function: 'Function',
     }
     return {
       uuid: this.uuid,

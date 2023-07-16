@@ -9,14 +9,23 @@ import {
   ChatCompletionRequestMessageWithUuid,
   IAPIConversation,
 } from '@atlas/api'
-import { Box, Button, HStack, Input, VStack } from '@chakra-ui/react'
-import { useEffect, useRef, useState } from 'react'
+import {
+  Box,
+  Button,
+  HStack,
+  Heading,
+  Input,
+  Skeleton,
+  VStack,
+} from '@chakra-ui/react'
+import { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react'
 
 export type MessageProps = {
   name: string
   content: string
   role: string
 }
+
 export function FalseConversation() {
   return (
     <Message
@@ -38,7 +47,9 @@ export function Message({ name, role, content }: MessageProps) {
 type ConversationPanelProps = {
   uuid?: string
 }
+
 export function ConversationPanel({ uuid }: ConversationPanelProps) {
+  const [isLoadingMessage, setIsLoadingMessage] = useState(false)
   const [content, setContent] = useState('')
   const [conversation, setConversation] = useState<IAPIConversation>()
   const { token } = useAtlasApi()
@@ -55,42 +66,93 @@ export function ConversationPanel({ uuid }: ConversationPanelProps) {
   }, [token, sendJsonMessage, uuid])
 
   const onSubmit = () => {
+    setIsLoadingMessage(true)
     return (
       uuid
         ? createMessage(token, uuid, content)
         : createConversation(token, content)
-    ).then(setConversation)
+    )
+      .then(setConversation)
+      .finally(() => setIsLoadingMessage(false))
   }
 
+  if (uuid && !conversation) return <LoadingConversation />
+
   return (
-    <VStack>
+    <ConversatonPanelDisplay
+      conversation={conversation}
+      isLoadingMessage={isLoadingMessage}
+      onSubmit={onSubmit}
+      content={content}
+      setContent={setContent}
+    />
+  )
+}
+
+export const LoadingConversation = () => (
+  <Box>
+    <Skeleton h="20px" m="1rem" />
+    <Skeleton h="20px" m="1rem" />
+    <Skeleton h="20px" m="1rem" />
+    <Skeleton h="20px" m="1rem" />
+  </Box>
+)
+
+type ConversationPanelDisplayProps = {
+  conversation: IAPIConversation | undefined
+  isLoadingMessage: boolean
+  onSubmit: () => void
+  content: string
+  setContent: Dispatch<SetStateAction<string>>
+}
+function ConversatonPanelDisplay({
+  conversation,
+  isLoadingMessage,
+  onSubmit,
+  content,
+  setContent,
+}: ConversationPanelDisplayProps) {
+  return (
+    <VStack padding="1rem">
       <Box>
         {conversation ? (
           <>
-            <h2>{conversation.title}</h2>
+            <Heading fontSize="2rem">{conversation.title}</Heading>
             {conversation.messages && (
               <Messages messages={conversation.messages} />
             )}
+            {isLoadingMessage && <LoadingMessage />}
           </>
         ) : (
           <FalseConversation />
         )}
       </Box>
-      <Box>
-        <HStack>
-          <Input
-            placeholder="What's new?"
-            value={content}
-            onChange={(event) => {
-              setContent(event.target.value)
-            }}
-          />
-          <Button type="submit" onClick={onSubmit}>
-            Send
-          </Button>
-        </HStack>
-      </Box>
+      <HStack w="100%">
+        <Input
+          flex="1"
+          placeholder="What's new?"
+          name="content"
+          value={content}
+          onChange={(event) => {
+            setContent(event.target.value)
+          }}
+        />
+        <Button type="submit" onClick={onSubmit}>
+          Send
+        </Button>
+      </HStack>
     </VStack>
+  )
+}
+
+function LoadingMessage() {
+  return (
+    <HStack>
+      <Box>
+        <strong>Atlas: </strong>
+      </Box>
+      <Skeleton h="20px" flex="1"></Skeleton>
+    </HStack>
   )
 }
 
