@@ -7,6 +7,7 @@ import {
   CreateDateColumn,
   DataSource,
   Entity,
+  EntityManager,
   Equal,
   Index,
   JoinColumn,
@@ -39,7 +40,7 @@ export class AuthProfile implements IAuthProfile {
   public created: Date
 
   static async create(
-    dataSource: DataSource,
+    dataSource: DataSource | EntityManager,
     user: User,
     provider: AuthProviders,
     providerId: string,
@@ -53,7 +54,7 @@ export class AuthProfile implements IAuthProfile {
   }
 
   static async getUser(
-    dataSource: DataSource,
+    dataSource: DataSource | EntityManager,
     provider: AuthProviders,
     providerId: string,
   ): Promise<IUser | undefined> {

@@ -2,7 +2,7 @@ import { User } from '@/entity/User'
 import { DataSource } from 'typeorm'
 
 export default async function listUsers(
-  dataSource: DataSource,
+  dataSource: DataSource | EntityManager,
 ): Promise<string[]> {
   return (await User.list(dataSource)).map((user) =>
     JSON.stringify({

@@ -6,7 +6,7 @@ const { LOCAL_DOMAIN } = process.env
 
 // returns an invite url to register the user's login details
 export default async function registerUser(
-  dataSource: DataSource,
+  dataSource: DataSource | EntityManager,
   organizationId: string,
 ): Promise<string> {
   const organization = await Organization.get(dataSource, organizationId)

@@ -47,7 +47,10 @@ export class User implements IUser {
   })
   public created: Date
 
-  static async create(dataSource: DataSource, organization: IOrganization) {
+  static async create(
+    dataSource: DataSource | EntityManager,
+    organization: IOrganization,
+  ) {
     const user = dataSource.getRepository(User).create({
       organization,
     })
@@ -68,7 +71,7 @@ export class User implements IUser {
     return result
   }
   static async getByInvite(
-    dataSource: DataSource,
+    dataSource: DataSource | EntityManager,
     inviteCode: string,
   ): Promise<User> {
     const [user] = await dataSource.getRepository(User).find({

@@ -41,7 +41,7 @@ export class Organization implements IOrganization {
     return await AppDataSource.getRepository(Organization).save(organization)
   }
 
-  static async get(dataSource: DataSource, uuid: string) {
+  static async get(dataSource: DataSource | EntityManager, uuid: string) {
     const [organization] = await dataSource.getRepository(Organization).find({
       where: { uuid },
       order: {

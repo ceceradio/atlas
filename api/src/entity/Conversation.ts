@@ -8,6 +8,7 @@ import {
   CreateDateColumn,
   DataSource,
   Entity,
+  EntityManager,
   Equal,
   FindOptionsRelations,
   JoinColumn,
@@ -42,7 +43,7 @@ export class Conversation implements IConversation {
   })
   public created: Date
 
-  static async create(dataSource: DataSource, creator: User) {
+  static async create(dataSource: DataSource | EntityManager, creator: User) {
     const conversation = dataSource.getRepository(Conversation).create({
       creator,
       organization: creator.organization,
@@ -51,7 +52,7 @@ export class Conversation implements IConversation {
   }
 
   static async listByOrganization(
-    dataSource: DataSource,
+    dataSource: DataSource | EntityManager,
     organization: Organization,
   ) {
     return dataSource.getRepository(Conversation).find({
@@ -62,7 +63,10 @@ export class Conversation implements IConversation {
     })
   }
 
-  static async listByCreator(dataSource: DataSource, creator: User) {
+  static async listByCreator(
+    dataSource: DataSource | EntityManager,
+    creator: User,
+  ) {
     return dataSource.getRepository(Conversation).find({
       where: { creator: Equal(creator.uuid) },
       order: {
@@ -72,7 +76,7 @@ export class Conversation implements IConversation {
   }
 
   static async get(
-    dataSource: DataSource,
+    dataSource: DataSource | EntityManager,
     uuid: string,
     relations?: FindOptionsRelations<Conversation>,
   ): Promise<IConversation | undefined> {

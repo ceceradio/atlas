@@ -11,6 +11,7 @@ import {
   CreateDateColumn,
   DataSource,
   Entity,
+  EntityManager,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -57,18 +58,18 @@ export class Message implements IMessage {
   }
 
   static async create(
-    AppDataSource: DataSource,
+    dataSource: DataSource | EntityManager,
     conversation: Conversation,
     author: User | null,
     authorType: AuthorTypes,
     content: string,
   ) {
-    const message = AppDataSource.getRepository(Message).create({
+    const message = dataSource.getRepository(Message).create({
       conversation,
       author,
       authorType,
       content,
     })
-    return await AppDataSource.getRepository(Message).save(message)
+    return dataSource.getRepository(Message).save(message)
   }
 }
