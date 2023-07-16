@@ -14,13 +14,6 @@ conversationApp.use(authorize)
 
 const atlasApi = new AtlasAPI()
 
-function wrapMessages(conversation: Conversation): IAPIConversation {
-  return {
-    ...conversation,
-    messages: atlasApi.getFullMessages(conversation),
-  }
-}
-
 conversationApp.get('/conversations', async (request, response) => {
   const { user } = response.locals
   if (!user) return response.status(400)
@@ -35,7 +28,7 @@ conversationApp.get('/conversation/:uuid', async (request, response) => {
   // look up prior conversation
   const conversation = await Conversation.get(postgres, uuid)
   if (!conversation) return response.status(404)
-  return response.json(wrapMessages(conversation))
+  return response.json(atlasApi.withOpeningMessages(conversation))
 })
 
 type ConversationPatchBody = { content: string }
@@ -96,5 +89,5 @@ async function performChatExchange(
     postgres,
     conversation.uuid,
   )) as Conversation // guaranteed to exist
-  return wrapMessages(conversation)
+  return atlasApi.withOpeningMessages(conversation)
 }

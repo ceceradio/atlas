@@ -95,4 +95,23 @@ export class Conversation implements IConversation {
     })
     return conversation
   }
+  toString() {
+    if (!this.messages || this.messages.length <= 0)
+      return '[conversation.messages missing. is the relation not loaded?]'
+    return (
+      this.messages
+        // remove system messages
+        .filter((message) => message.authorType !== 'system')
+        // go to open AI format
+        .map((message) => {
+          return { ...message.toOpenAI(), message }
+        })
+        // create text strings for each message
+        .map(({ role, content, name, message }) => {
+          return `${name} (${role}) (${message.created}): ${content}`
+        })
+        // join all messages by new line
+        .join('\n')
+    )
+  }
 }

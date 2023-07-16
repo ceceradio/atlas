@@ -1,6 +1,11 @@
 import { AtlasError } from '@/app/errors'
+import { Conversation } from '@/entity/Conversation'
 import { ChatCompletionRequestMessage, Configuration, OpenAIApi } from 'openai'
-import { ChatCompletionRequestMessageWithUuid, IConversation } from '..'
+import {
+  ChatCompletionRequestMessageWithUuid,
+  IAPIConversation,
+  IConversation,
+} from '..'
 
 const defaultConfiguration = new Configuration({
   organization: process.env.OPENAI_ORG,
@@ -41,23 +46,12 @@ export class AtlasAPI {
       messages,
     })
   }
-  async titleConversation(conversation: IConversation): Promise<string> {
+
+  async titleConversation(conversation: Conversation): Promise<string> {
     if (!conversation.messages || conversation.messages.length <= 0)
       throw new Error('empty')
     if (!conversation) throw new Error('Conversation not found')
-    const content = conversation.messages
-      // remove system messages
-      .filter((message) => message.authorType !== 'system')
-      // go to open AI format
-      .map((message) => {
-        return { ...message.toOpenAI(), message }
-      })
-      // create text strings for each message
-      .map(({ role, content, name, message }) => {
-        return `${name} (${role}) (${message.created}): ${content}`
-      })
-      // join all messages by new line
-      .join('\n')
+    const content = conversation.toString()
     return await this.respondToMessages([
       {
         role: 'system',
@@ -69,12 +63,6 @@ export class AtlasAPI {
         content,
       },
     ])
-  }
-
-  getFullMessages(conversation: IConversation) {
-    return openingMessages.concat(
-      conversation.messages.map((message) => message.toOpenAI()),
-    )
   }
 
   async respondToConversation(conversation: IConversation) {
@@ -95,6 +83,16 @@ export class AtlasAPI {
     }
 
     return data.choices[0].message.content
+  }
+
+  public withOpeningMessages(conversation: IConversation): IAPIConversation {
+    const messages = openingMessages.concat(
+      conversation.messages.map((message) => message.toOpenAI()),
+    )
+    return {
+      ...conversation,
+      messages,
+    }
   }
 }
 
