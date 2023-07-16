@@ -12,7 +12,7 @@ openssl req \
     -days 365 \
     -nodes \
     -x509 \
-    -subj "/C=US/ST=oned/L=ocal/O=atlas.zone/CN=local.atlas.zone" \
-    -keyout certs/local.atlas.zone.key \
-    -out certs/local.atlas.zone.cert
+    -subj "/C=US/ST=oned/L=ocal/O=atlasai.zone/CN=local.atlasai.zone" \
+    -keyout certs/local.atlasai.zone.key \
+    -out certs/local.atlasai.zone.cert
 

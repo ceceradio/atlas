@@ -1,17 +1,14 @@
 'use client'
-import { ConversationPanel } from '@/components/conversation'
-import { SidePanel } from '@/components/sidepanel'
-import { Box, Flex } from '@chakra-ui/react'
+import { ConversationPanel } from '@/components/Conversation'
+import { SidePanelPage } from '@/components/SidePanel'
+import withAuth from '@/helpers/withAuth'
 
-export default function Zone() {
+function Zone() {
   return (
-    <Flex>
-      <Box width="xs">
-        <SidePanel />
-      </Box>
-      <Box flex="1">
-        <ConversationPanel />
-      </Box>
-    </Flex>
+    <SidePanelPage>
+      <ConversationPanel />
+    </SidePanelPage>
   )
 }
+
+export default withAuth(Zone)

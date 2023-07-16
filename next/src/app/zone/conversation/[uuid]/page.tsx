@@ -1,19 +1,16 @@
 'use client'
-import { ConversationPanel } from '@/components/conversation'
-import { SidePanel } from '@/components/sidepanel'
-import { Box, Flex } from '@chakra-ui/react'
+import { ConversationPanel } from '@/components/Conversation'
+import { SidePanelPage } from '@/components/SidePanel'
+import withAuth from '@/helpers/withAuth'
 import { useParams } from 'next/navigation'
 
-export default function ConversationDetails() {
+function ConversationDetails() {
   const { uuid } = useParams()
   return (
-    <Flex>
-      <Box width="xs">
-        <SidePanel />
-      </Box>
-      <Box flex="1">
-        <ConversationPanel uuid={uuid} />
-      </Box>
-    </Flex>
+    <SidePanelPage>
+      <ConversationPanel uuid={uuid} />
+    </SidePanelPage>
   )
 }
+
+export default withAuth(ConversationDetails)

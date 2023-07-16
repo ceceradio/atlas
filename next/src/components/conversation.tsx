@@ -3,10 +3,14 @@ import {
   createMessage,
   getConversation,
 } from '@/client/conversatons'
-import { ChatCompletionRequestMessageWithUuid, IConversation } from '@atlas/api'
-import { useAuth0 } from '@auth0/auth0-react'
+import useAtlasApi from '@/helpers/useAtlasApi'
+import useAtlasSocket from '@/helpers/useAtlasSocket'
+import {
+  ChatCompletionRequestMessageWithUuid,
+  IAPIConversation,
+} from '@atlas/api'
 import { Box, Button, HStack, Input, VStack } from '@chakra-ui/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export type MessageProps = {
   name: string
@@ -36,23 +40,28 @@ type ConversationPanelProps = {
 }
 export function ConversationPanel({ uuid }: ConversationPanelProps) {
   const [content, setContent] = useState('')
-  const [conversation, setConversation] = useState<IConversation>()
-  const { getAccessTokenSilently } = useAuth0()
+  const [conversation, setConversation] = useState<IAPIConversation>()
+  const { token } = useAtlasApi()
+  const { sendJsonMessage } = useAtlasSocket()
+  const lastFetchedUuid = useRef('')
+
   useEffect(() => {
-    if (uuid)
-      getAccessTokenSilently()
-        .then((token) => getConversation(token, uuid))
+    if (token && uuid && lastFetchedUuid.current !== uuid) {
+      lastFetchedUuid.current = uuid
+      getConversation(token, uuid)
         .then(setConversation)
-  }, [getAccessTokenSilently, uuid])
+        .then(() => sendJsonMessage({ type: 'joined', conversationId: uuid }))
+    }
+  }, [token, sendJsonMessage, uuid])
+
   const onSubmit = () => {
-    return getAccessTokenSilently()
-      .then((token) =>
-        uuid
-          ? createMessage(token, uuid, content)
-          : createConversation(token, content),
-      )
-      .then(setConversation)
+    return (
+      uuid
+        ? createMessage(token, uuid, content)
+        : createConversation(token, content)
+    ).then(setConversation)
   }
+
   return (
     <VStack>
       <Box>

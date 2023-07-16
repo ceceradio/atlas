@@ -3,9 +3,7 @@ import { Conversation } from '@/entity/Conversation'
 import { Message } from '@/entity/Message'
 import { Organization } from '@/entity/Organization'
 import { User } from '@/entity/User'
-
 import request from 'supertest'
-
 import { DataSource } from 'typeorm'
 import { conversationApp } from './conversation'
 

@@ -10,7 +10,7 @@ export class Antennae {
       userSocket.socket.send(JSON.stringify(message), (err) => {
         if (err) {
           this.clients.delete(userSocket)
-          console.error('encountered turbulence', err)
+          console.debug('encountered turbulence', err)
           userSocket.close()
         }
       }),

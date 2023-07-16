@@ -1,7 +1,9 @@
-import type { IMessage } from '@/interface/Message'
+import type {
+  ChatCompletionRequestMessageWithUuid,
+  IMessage,
+} from '@/interface/Message'
 import type { IOrganization } from '@/interface/Organization'
 import type { IUser } from '@/interface/User'
-import type { ChatCompletionRequestMessage } from 'openai'
 
 export type IConversation = {
   uuid: string
@@ -12,5 +14,5 @@ export type IConversation = {
   created: Date
 }
 export type IAPIConversation = Omit<IConversation, 'messages'> & {
-  messages: ChatCompletionRequestMessage[]
+  messages: ChatCompletionRequestMessageWithUuid[]
 }

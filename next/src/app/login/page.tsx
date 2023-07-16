@@ -20,22 +20,22 @@ export default function Login() {
     const callApi = async () => {
       const token = await getAccessTokenSilently({
         authorizationParams: {
-          scope: 'self', // Scope that exists for the API being called. You can create these through the Auth0 Management API or through the Auth0 Dashboard in the Permissions view of your API.
+          scope: process.env.NEXT_PUBLIC_AUTH0_SCOPE,
         },
       })
-      const response = await fetch('https://local.atlas.zone/api/whoami', {
+      const response = await fetch('https://local.atlasai.zone/api/whoami', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       })
-      const { user } = await response.json()
-      if (user && user.inviteCode)
+      const user = await response.json()
+      if (!user) router.push(`/`)
+      else if (user && user.inviteCode)
         router.push(`/rsvp?inviteCode=${user.inviteCode}`)
       else router.push(`/zone`)
     }
 
-    if (isAuthenticated && router && getAccessTokenSilently !== undefined)
-      callApi()
+    if (isAuthenticated && router) callApi()
   }, [isAuthenticated, router, getAccessTokenSilently])
 
   if (isLoading) {

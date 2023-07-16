@@ -23,7 +23,6 @@ export const authorize: express.Handler = (request, response, next) => {
       })
       .catch((e) => {
         console.error(e)
-        //throw new AtlasError('401')
         return response.status(401)
       })
   })
@@ -32,6 +31,5 @@ export const authorize: express.Handler = (request, response, next) => {
 export const authApp = express()
 
 authApp.get('/whoami', checkJwt, (request, response) => {
-  const providerId = request.auth?.payload?.sub
-  return response.json({ providerId })
+  return response.json(response.locals.user)
 })
