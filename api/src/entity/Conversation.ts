@@ -79,8 +79,8 @@ export class Conversation implements IConversation {
     dataSource: DataSource | EntityManager,
     uuid: string,
     relations?: FindOptionsRelations<Conversation>,
-  ): Promise<IConversation | undefined> {
-    const [conversation] = await dataSource.getRepository(Conversation).find({
+  ): Promise<IConversation | null> {
+    return dataSource.getRepository(Conversation).findOne({
       where: { uuid },
       order: {
         created: 'ASC',
@@ -93,7 +93,6 @@ export class Conversation implements IConversation {
         },
       },
     })
-    return conversation
   }
   toString() {
     if (!this.messages || this.messages.length <= 0)

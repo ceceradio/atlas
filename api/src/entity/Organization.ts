@@ -37,7 +37,7 @@ export class Organization implements IOrganization {
   })
   created: Date
 
-  static async create(AppDataSource: DataSource) {
+  static async create(AppDataSource: DataSource | EntityManager) {
     const organization = AppDataSource.getRepository(Organization).create()
     return await AppDataSource.getRepository(Organization).save(organization)
   }
@@ -52,7 +52,7 @@ export class Organization implements IOrganization {
     return organization
   }
 
-  static async list(dataSource: DataSource) {
+  static async list(dataSource: DataSource | EntityManager) {
     return dataSource.getRepository(Organization).find({
       order: {
         created: 'ASC',

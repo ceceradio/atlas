@@ -83,7 +83,7 @@ export class User implements IUser {
     return user
   }
 
-  static async list(dataSource: DataSource) {
+  static async list(dataSource: DataSource | EntityManager) {
     return dataSource.getRepository(User).find({
       order: {
         created: 'ASC',

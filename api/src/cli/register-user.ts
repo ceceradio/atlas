@@ -1,6 +1,6 @@
 import { Organization } from '@/entity/Organization'
 import { User } from '@/entity/User'
-import { DataSource } from 'typeorm'
+import { DataSource, EntityManager } from 'typeorm'
 
 const { LOCAL_DOMAIN } = process.env
 

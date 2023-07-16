@@ -41,10 +41,11 @@ conversationApp.patch('/conversation/:uuid', async (request, response) => {
   // look up prior conversation
   const conversation = await Conversation.get(postgres, uuid)
   if (!conversation) return response.status(404)
-  // add background job
-  retitleQueue.add({ uuid: conversation.uuid }, { delay: 5000 })
   // create message from user and save to database
-  return response.json(await performChatExchange(content, user, conversation))
+  const data = await performChatExchange(content, user, conversation)
+  // add background job
+  retitleQueue.add({ uuid: conversation.uuid }, { delay: 1000 })
+  return response.json(data)
 })
 
 type ConversationPostBody = { content: string }
@@ -56,15 +57,21 @@ conversationApp.post('/conversation', async (request, response) => {
 
   // create a conversation and add the opening message to it
   const conversation = await Conversation.create(postgres, user)
-  // add background job
-  retitleQueue.add({ uuid: conversation.uuid }, { delay: 5000 })
-  await performChatExchange('', user, conversation)
+  await openConversation(user, conversation)
 
-  return response.json(await performChatExchange(content, user, conversation))
+  const data = await performChatExchange(content, user, conversation)
+  // add background job
+  retitleQueue.add({ uuid: conversation.uuid }, { delay: 1000 })
+
+  return response.json(data)
 })
 
+async function openConversation(user: IUser, conversation: IConversation) {
+  return performChatExchange('', user, conversation)
+}
+
 async function performChatExchange(
-  content: string | null,
+  content: string,
   user: IUser,
   conversation: IConversation,
 ): Promise<IAPIConversation> {

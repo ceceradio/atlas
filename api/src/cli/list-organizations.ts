@@ -1,5 +1,5 @@
 import { Organization } from '@/entity/Organization'
-import { DataSource } from 'typeorm'
+import { DataSource, EntityManager } from 'typeorm'
 
 export default async function listOrganizations(
   dataSource: DataSource | EntityManager,

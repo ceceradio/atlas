@@ -1,5 +1,5 @@
 import { User } from '@/entity/User'
-import { DataSource } from 'typeorm'
+import { DataSource, EntityManager } from 'typeorm'
 
 export default async function listUsers(
   dataSource: DataSource | EntityManager,
