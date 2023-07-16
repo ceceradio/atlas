@@ -4,6 +4,9 @@
   "version": "1.0.0",
   "description": "atlas AI monorepo",
   "scripts": {
+    "postinstall": "run-p install:*",
+    "install:api": "cd api && npm install",
+    "install:next": "cd next && npm install",
     "prestart": "docker compose up -d",
     "reset": "docker compose down --volumes",
     "start": "run-p start:*",
