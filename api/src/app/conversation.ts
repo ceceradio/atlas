@@ -1,5 +1,5 @@
 import { AtlasError } from '@/app/errors'
-import AtlasAPI, { openingMessages } from '@/atlas'
+import { AtlasAPI } from '@/atlas'
 import { postgres } from '@/data-source'
 import { Conversation } from '@/entity/Conversation'
 import { Message } from '@/entity/Message'
@@ -12,16 +12,12 @@ import { authorize } from './authorize'
 export const conversationApp = express()
 conversationApp.use(authorize)
 
-function getFullOpenAIMessages(conversation: Conversation) {
-  return openingMessages.concat(
-    conversation.messages.map((message) => message.toOpenAI()),
-  )
-}
+const atlasApi = new AtlasAPI()
 
 function wrapMessages(conversation: Conversation): IAPIConversation {
   return {
     ...conversation,
-    messages: getFullOpenAIMessages(conversation),
+    messages: atlasApi.getFullMessages(conversation),
   }
 }
 
@@ -93,7 +89,7 @@ async function performChatExchange(
     conversation,
     user,
     'assistant',
-    await AtlasAPI.askToRespond(getFullOpenAIMessages(conversation)),
+    await atlasApi.respondToConversation(conversation),
   )
   // refresh
   conversation = (await Conversation.get(

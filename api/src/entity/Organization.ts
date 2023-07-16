@@ -8,6 +8,7 @@ import {
   CreateDateColumn,
   DataSource,
   Entity,
+  EntityManager,
   OneToMany,
   PrimaryGeneratedColumn,
   Relation,

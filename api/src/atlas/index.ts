@@ -1,12 +1,11 @@
 import { AtlasError } from '@/app/errors'
 import { ChatCompletionRequestMessage, Configuration, OpenAIApi } from 'openai'
-import { ChatCompletionRequestMessageWithUuid } from '..'
+import { ChatCompletionRequestMessageWithUuid, IConversation } from '..'
 
-const configuration = new Configuration({
+const defaultConfiguration = new Configuration({
   organization: process.env.OPENAI_ORG,
   apiKey: process.env.OPENAI_API_KEY,
 })
-const openai = new OpenAIApi(configuration)
 export const openingMessages: ChatCompletionRequestMessageWithUuid[] = [
   {
     uuid: 'cafebabe1',
@@ -31,18 +30,59 @@ export const openingMessages: ChatCompletionRequestMessageWithUuid[] = [
   },
 ]
 
-class ConversationAPI {
-  static async answerPrompt(messages: ChatCompletionRequestMessage[]) {
-    return await openai.createChatCompletion({
+export class AtlasAPI {
+  private openai: OpenAIApi
+  constructor(configuration?: Configuration) {
+    this.openai = new OpenAIApi(configuration || defaultConfiguration)
+  }
+  async answerPrompt(messages: ChatCompletionRequestMessage[]) {
+    return await this.openai.createChatCompletion({
       model: 'gpt-3.5-turbo',
       messages,
     })
   }
-}
+  async titleConversation(conversation: IConversation): Promise<string> {
+    if (!conversation.messages || conversation.messages.length <= 0)
+      throw new Error('empty')
+    if (!conversation) throw new Error('Conversation not found')
+    const content = conversation.messages
+      // remove system messages
+      .filter((message) => message.authorType !== 'system')
+      // go to open AI format
+      .map((message) => {
+        return { ...message.toOpenAI(), message }
+      })
+      // create text strings for each message
+      .map(({ role, content, name, message }) => {
+        return `${name} (${role}) (${message.created}): ${content}`
+      })
+      // join all messages by new line
+      .join('\n')
+    return await this.respondToMessages([
+      {
+        role: 'system',
+        content:
+          'Read the following exchange and respond only with a summarized title for the most recent topic(s) of conversation. Limit the title to 2 to 5 words. Do not respond with more than 5 words. The title should favor more recent messages, but encompass as much of the history of messages as possible.',
+      },
+      {
+        role: 'user',
+        content,
+      },
+    ])
+  }
 
-export default class AtlasAPI {
-  static async askToRespond(messages?: ChatCompletionRequestMessage[]) {
-    const { data, status } = await ConversationAPI.answerPrompt(
+  getFullMessages(conversation: IConversation) {
+    return openingMessages.concat(
+      conversation.messages.map((message) => message.toOpenAI()),
+    )
+  }
+
+  async respondToConversation(conversation: IConversation) {
+    return this.respondToMessages(this.getFullMessages(conversation))
+  }
+
+  async respondToMessages(messages?: ChatCompletionRequestMessage[]) {
+    const { data, status } = await this.answerPrompt(
       stripUuid(messages || openingMessages),
     )
     // @todo monitoring point?

@@ -10,6 +10,7 @@ import {
   CreateDateColumn,
   DataSource,
   Entity,
+  EntityManager,
   Equal,
   Index,
   JoinColumn,
