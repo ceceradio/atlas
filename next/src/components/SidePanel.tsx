@@ -1,4 +1,4 @@
-import { getConversations } from '@/client/conversatons'
+import { getConversations } from '@/client/conversations'
 import useAtlasApi from '@/helpers/useAtlasApi'
 import useAtlasSocket from '@/helpers/useAtlasSocket'
 import { AtlasSocketMessage, IAPIConversation, IConversation } from '@atlas/api'

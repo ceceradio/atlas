@@ -2,7 +2,7 @@ import {
   createConversation,
   createMessage,
   getConversation,
-} from '@/client/conversatons'
+} from '@/client/conversations'
 import useAtlasApi from '@/helpers/useAtlasApi'
 import useAtlasSocket from '@/helpers/useAtlasSocket'
 import {
@@ -18,6 +18,7 @@ import {
   Skeleton,
   VStack,
 } from '@chakra-ui/react'
+import { useRouter } from 'next/navigation'
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react'
 
 export type MessageProps = {
@@ -55,6 +56,7 @@ export function ConversationPanel({ uuid }: ConversationPanelProps) {
   const { token } = useAtlasApi()
   const { sendJsonMessage } = useAtlasSocket()
   const lastFetchedUuid = useRef('')
+  const router = useRouter()
 
   useEffect(() => {
     if (token && uuid && lastFetchedUuid.current !== uuid) {
@@ -67,13 +69,15 @@ export function ConversationPanel({ uuid }: ConversationPanelProps) {
 
   const onSubmit = () => {
     setIsLoadingMessage(true)
-    return (
-      uuid
-        ? createMessage(token, uuid, content)
-        : createConversation(token, content)
-    )
-      .then(setConversation)
-      .finally(() => setIsLoadingMessage(false))
+    if (!uuid) {
+      createConversation(token, content).then(({ uuid }) =>
+        router.push(`/zone/conversation/${uuid}`),
+      )
+    } else {
+      createMessage(token, uuid, content)
+        .then(setConversation)
+        .finally(() => setIsLoadingMessage(false))
+    }
   }
 
   if (uuid && !conversation) return <LoadingConversation />

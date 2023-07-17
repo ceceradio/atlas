@@ -3,6 +3,7 @@ import { Message } from '@/entity/Message'
 import { Organization } from '@/entity/Organization'
 import { User } from '@/entity/User'
 import { IConversation } from '@/interface/Conversation'
+import { ChatCompletionRequestMessage } from 'openai'
 import {
   Column,
   CreateDateColumn,
@@ -79,7 +80,7 @@ export class Conversation implements IConversation {
     dataSource: DataSource | EntityManager,
     uuid: string,
     relations?: FindOptionsRelations<Conversation>,
-  ): Promise<IConversation | null> {
+  ): Promise<Conversation | null> {
     return dataSource.getRepository(Conversation).findOne({
       where: { uuid },
       order: {
@@ -94,11 +95,15 @@ export class Conversation implements IConversation {
       },
     })
   }
-  toString() {
+  toChatString(tail?: number) {
     if (!this.messages || this.messages.length <= 0)
       return '[conversation.messages missing. is the relation not loaded?]'
+    return Conversation.toOpenAIChatString(this.messages, tail)
+  }
+
+  static toOpenAIChatString(messages: Message[], tail?: number) {
     return (
-      this.messages
+      messages
         // remove system messages
         .filter((message) => message.authorType !== 'system')
         // go to open AI format
@@ -108,6 +113,19 @@ export class Conversation implements IConversation {
         // create text strings for each message
         .map(({ role, content, name, message }) => {
           return `${name} (${role}) (${message.created}): ${content}`
+        })
+        .slice(-1 * (tail || 0))
+        // join all messages by new line
+        .join('\n')
+    )
+  }
+
+  static toChatString(messages: ChatCompletionRequestMessage[]) {
+    return (
+      messages
+        // create text strings for each message
+        .map(({ role, content, name }) => {
+          return `${name} (${role}): ${content}`
         })
         // join all messages by new line
         .join('\n')

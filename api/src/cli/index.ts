@@ -6,10 +6,12 @@ import registerUser from '@/cli/register-user'
 import { getDataSource } from '@/data-source'
 import minimist from 'minimist'
 import { DataSource } from 'typeorm'
+import respond from './respond'
+import responseEvaluation from './response-evaluation'
 import retitleConversation from './retitle-conversation'
 export { listUsers, registerOrganization, registerUser, retitleConversation }
 
-if (require.main !== module) {
+if (require.main === module) {
   const argv = minimist(process.argv.slice(2))
   const [command] = argv._
   let dataSourceHandle: DataSource
@@ -24,15 +26,22 @@ if (require.main !== module) {
         return await listUsers(dataSource)
       } else if (command === 'retitleConversation') {
         return await retitleConversation(dataSource, argv.uuid)
+      } else if (command === 'responseEvaluation') {
+        return await responseEvaluation(dataSource, argv.uuid)
+      } else if (command === 'respond') {
+        return await respond(dataSource, argv.uuid)
       }
     })
     .then(console.info)
+    .catch((e) => {
+      console.error(e.response)
+    })
     .finally(() => {
       dataSourceHandle
         .destroy()
         .then(() => process.exit(1))
-        .catch(() => {
-          /* no op */
+        .catch((e) => {
+          console.error(e)
         })
     })
 }

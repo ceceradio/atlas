@@ -3,8 +3,8 @@ import { AtlasAPI } from '@/atlas'
 import { postgres } from '@/data-source'
 import { Conversation } from '@/entity/Conversation'
 import { Message } from '@/entity/Message'
-import { IAPIConversation, IConversation } from '@/interface/Conversation'
-import { IUser } from '@/interface/User'
+import { User } from '@/entity/User'
+import { IAPIConversation } from '@/interface/Conversation'
 import { retitleQueue } from '@/queue/retitle'
 import express from 'express'
 import { authorize } from './authorize'
@@ -66,14 +66,14 @@ conversationApp.post('/conversation', async (request, response) => {
   return response.json(data)
 })
 
-async function openConversation(user: IUser, conversation: IConversation) {
+async function openConversation(user: User, conversation: Conversation) {
   return performChatExchange('', user, conversation)
 }
 
 async function performChatExchange(
   content: string,
-  user: IUser,
-  conversation: IConversation,
+  user: User,
+  conversation: Conversation,
 ): Promise<IAPIConversation> {
   if (!user) throw new AtlasError()
   if (content)
@@ -89,7 +89,7 @@ async function performChatExchange(
     conversation,
     user,
     'assistant',
-    await atlasApi.respondToConversation(conversation),
+    (await atlasApi.respondToConversation(conversation)).content || '',
   )
   // refresh
   conversation = (await Conversation.get(
