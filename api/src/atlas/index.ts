@@ -9,11 +9,23 @@ import {
   OpenAIApi,
 } from 'openai'
 import { ChatCompletionRequestMessageWithUuid, IAPIConversation } from '..'
+const atlasDecisionIntro =
+  ` Read the recent incomplete chat log in the following message. The chat log lines each have four parts: the name of the person who sent the message, the role of the sender (user, assistant, or system), the time it was posted, and message itself. ` +
+  ` Atlas is one of many chat participants. There are multiple users having conversations in the chat.` +
+  ` Even if you cannot see messages from other participants, they are likely reading or will read the messages and may respond in the future.` +
+  ` 5 or more messages in the chat log may include irrelevant information.` +
+  ` Atlas provides useful information at the right time.` +
+  ` Atlas is playful and humorous sometimes.` +
+  ` Atlas is also tasked with respecting the time and attention of conversation participants.` +
+  ` Atlas may be referred to indirectly as a bot, chatbot, gpt, gpt3, gpt4, chatgpt, or robot.`
 
 const defaultConfiguration = new Configuration({
   organization: process.env.OPENAI_ORG,
   apiKey: process.env.OPENAI_API_KEY,
 })
+
+export type ChatCompletionRequestMessageWithTime =
+  ChatCompletionRequestMessage & { createdAt: Date }
 export const openingMessages: ChatCompletionRequestMessageWithUuid[] = [
   {
     uuid: 'cafebabe1',
@@ -127,55 +139,75 @@ export class AtlasAPI {
     if (!function_call || !function_call.arguments)
       throw new Error('Should be a function call')
     const args = JSON.parse(function_call.arguments)
-    return args.answer === 'yes'
+    return args.answer.toLowerCase() === 'yes'
   }
 
   async softResponse(
-    messages: ChatCompletionRequestMessage[],
+    messages: ChatCompletionRequestMessageWithTime[],
     continuation?: boolean,
   ): Promise<string> {
-    //const content = Conversation.toChatString(messages)
-    const message = await this._shouldAtlasRespondToMessages(
-      messages,
-      continuation,
-    )
-    console.log(message)
+    const message = await this.getAtlasRespondToMessages(messages, continuation)
+
     if (!message || !message.function_call) return ''
-    if (!this.isYes(message.function_call)) return ''
     if (!message.function_call.arguments) return ''
+    if (!this.isYes(message.function_call)) {
+      try {
+        if (continuation) return ''
+        const args = JSON.parse(message.function_call.arguments)
+        if (!args.reason) return ''
+        if (args.message) return args.message
+        return await this.getAtlasReasonMessage(messages, args.reason)
+      } catch (e) {
+        /* */
+      }
+    }
     const args = JSON.parse(message.function_call.arguments)
     if (!args.message) {
+      // last chance to respond, buddy. lol
       const { content } = await this.respondToMessages(messages)
       return content || ''
     }
     return args.message
   }
 
+  async getAtlasReasonMessage(
+    messages: ChatCompletionRequestMessageWithTime[],
+    reason: string,
+  ): Promise<string> {
+    const content = Conversation.toChatString(messages)
+    const message = await this.respondToMessages([
+      ...this.getShouldRespondPrompt(content),
+      ...this.getShouldProvideReasonPrompt(reason),
+    ])
+    if (message.content?.toLowerCase().startsWith('no')) return ''
+    return message.content || ''
+  }
+
   async shouldAtlasRespondToMessages(
-    messages: ChatCompletionRequestMessage[],
+    messages: ChatCompletionRequestMessageWithTime[],
   ): Promise<boolean> {
-    const { function_call } = await this._shouldAtlasRespondToMessages(messages)
+    const { function_call } = await this.getAtlasRespondToMessages(messages)
     if (!function_call) return false
     return this.isYes(function_call)
   }
 
-  private async _shouldAtlasRespondToMessages(
-    messages: ChatCompletionRequestMessage[],
+  async getAtlasRespondToMessages(
+    messages: ChatCompletionRequestMessageWithTime[],
     continuation?: boolean,
   ): Promise<ChatCompletionResponseMessage> {
     const content = Conversation.toChatString(messages)
-    return this._shouldAtlasRespond(content, continuation)
+    return this.getAtlasRespondToString(content, continuation)
   }
 
   isYes(function_call: ChatCompletionRequestMessageFunctionCall) {
     if (!function_call?.arguments) return false
     if (function_call.arguments === 'yes' || function_call.arguments === 'no') {
-      // this is technically a failure but we'll run with it
-      return function_call.arguments === 'yes'
+      return false
     }
     try {
-      const args = JSON.parse(function_call.arguments)
-      return args.answer === 'yes'
+      console.log(function_call.arguments)
+      const args = JSON.parse(function_call.arguments.replace(/\n/g, ' '))
+      return args.answer.toLowerCase() === 'yes'
     } catch (e) {
       console.log(e)
       console.log(function_call.arguments)
@@ -187,36 +219,53 @@ export class AtlasAPI {
     content: string,
     continuation?: boolean,
   ): ChatCompletionRequestMessage[] {
+    let systemContent =
+      atlasDecisionIntro +
+      `- You must make a decision for Atlas by calling a function: Should Atlas add an additional message to the conversation?\n` +
+      `- Atlas will add a message if being directly addressed or asked a question. If Atlas has been addressed, but it has not responded, it should add a message to the conversation.\n` +
+      `- Atlas will add a message to the conversation without being addressed if they believe they can add significant value without any additional information from other conversation participants.\n` +
+      `- If Atlas is directly addressed and expected to answer a question but needs specific information, they can add a message to the conversation to ask for that information\n` +
+      `- If Atlas has stated it will do something but has completed it yet, it should add a message to the chat, because sending a message to the chat will be part of completing the task.\n` +
+      `- Call the function with "yes" as the answer if Atlas should add another message to the conversation. Call the function with "no" if Atlas should not add another message.\n` +
+      `- You must provide a reason as an argument to the function.\n` +
+      `- Ignore older messages that are no longer relevant.\n` +
+      `- Ignore parts of the conversation that are not relevant to the more recent messages.\n` +
+      `- You must provide the text that Atlas should respond with. If Atlas would not respond, set it to empty string.\n` +
+      `- If the reason is an important message, Atlas should add the reason as a message to the conversation.\n` +
+      `- If the most recent message is directly addressing Atlas, there is a high likelyhood that that is the most relevant message to this decision.\n` +
+      `- If the reason why Atlas should not add a message to the conversation is because it already responded to the user's messages, you should still evaluate whether the most recent message requires an answer.\n` +
+      `- If ceceradio asks Atlas to do something, you should do it, unless Atlas did it already.\n`
+    systemContent += continuation
+      ? `If Atlas recently sent a message, Atlas should only add another message if it is important, or adds significant additional explanatory information besides simply listing more things. Atlas never responds to the same message twice. If Atlas is about respond even though it already responded, it should not. Adding additional information is not as important as adding important information. If a user does not indicate how many messages they want, limit the continuation.`
+      : ''
     return [
       {
         role: 'system',
-        content:
-          `Read the chat log in the next message. Atlas is a chatbot (not a user).` +
-          ` Atlas is not the only chat participant. There are multiple users, potentially having a conversation, in the chat.` +
-          ` Even if you cannot see messages from other participants, they are likely reading or will read the messages and may respond in the future.` +
-          ` The format of the chat messages are as follows: name (role): message` +
-          ` Atlas values providing contextually-rich information more than adding a greater quantity of messages.` +
-          ` Atlas is also tasked with respecting the time and attention of conversation participants.` +
-          ` Atlas may be referred to indirectly as a bot, chatbot, gpt, gpt3, gpt4, chatgpt, or robot.` +
-          ` You must make a decision for Atlas. Should Atlas add an additional message to the conversation?` +
-          ` Atlas will add a message if being directly addressed or asked a question. If Atlas has been addressed, but it has not responded, it should add a message to the conversation.` +
-          ` Atlas will add a message to the conversation without being addressed if they believe they can add significant value without any additional information from other conversation participants.` +
-          ` If Atlas is directly addressed and expected to answer a question but needs specific information, they can add a message to the conversation to ask for that information` +
-          ` Call the function with "yes" as the answer if Atlas should add another message to the conversation. Call the function with "no" if Atlas should not add another message.` +
-          ` You must provide a reason.` +
-          ` You must provide the message that Atlas should respond with. If Atlas would not respond, set it to empty string.` +
-          ` You must provide a value for message.` +
-          continuation
-            ? ` You are primarily checking to see if Atlas has anything more to say based on context.`
-            : '',
+        content: systemContent,
       },
       {
-        role: 'system',
+        role: 'user',
         content,
       },
     ]
   }
-  private async _shouldAtlasRespond(
+
+  private getShouldProvideReasonPrompt(
+    reason: string,
+  ): ChatCompletionRequestMessage[] {
+    return [
+      {
+        role: 'assistant',
+        content: 'Atlas will not respond to the prompt because ' + reason,
+      },
+      {
+        role: 'system',
+        content: `Atlas decided not add a message to the chat because "${reason}". You have the option of composing a response if it seems to be important that the user receives a message about the reason. Do not send a message unless directly addressed. If a response is required, compose a message to the user explaining the reason it cannot respond as asked. Otherwise output an empty message.`,
+      },
+    ]
+  }
+
+  async getAtlasRespondToString(
     content: string,
     continuation?: boolean,
   ): Promise<ChatCompletionResponseMessage> {

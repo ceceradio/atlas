@@ -1,9 +1,9 @@
 'use server'
+import { ChatCompletionRequestMessageWithTime } from '@/atlas'
 import { Message } from '@/entity/Message'
 import { Organization } from '@/entity/Organization'
 import { User } from '@/entity/User'
 import { IConversation } from '@/interface/Conversation'
-import { ChatCompletionRequestMessage } from 'openai'
 import {
   Column,
   CreateDateColumn,
@@ -120,12 +120,12 @@ export class Conversation implements IConversation {
     )
   }
 
-  static toChatString(messages: ChatCompletionRequestMessage[]) {
+  static toChatString(messages: ChatCompletionRequestMessageWithTime[]) {
     return (
       messages
         // create text strings for each message
-        .map(({ role, content, name }) => {
-          return `${name} (${role}): ${content}`
+        .map(({ role, content, name, createdAt }) => {
+          return `(${role}) ${name} at ${createdAt}: ${content}`
         })
         // join all messages by new line
         .join('\n')
