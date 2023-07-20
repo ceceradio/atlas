@@ -1,13 +1,10 @@
 import { messageOrganizationQueue } from '@/queue/messageOrganization'
 import { RawData, Server, ServerOptions, WebSocketServer } from 'ws'
-import { client } from '../atlas/discord'
 import { Antennae } from './Antennae'
 import { UserSocket } from './UserSocket'
 import { identify } from './identify'
 import { joined } from './joined'
 import { update } from './update'
-
-client.login(process.env.DISCORD_TOKEN || '')
 
 export type AtlasSocketMessage<T> = {
   type: 'update' | 'identify' | 'identified' | 'joined'

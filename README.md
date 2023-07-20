@@ -12,17 +12,16 @@ ext eslint
 
 # setup
 
-1. `npm install`
-2. `npm run setup`
-3. prepare an auth0 app/api and openai key
-4. create and fill `./api/.env` (create it by copying `./api/.env.template`)
-5. create and fill `./next/.env.local` (create it by copying `./next/.env.template`)
-6. `npm start` and open [](https://local.atlasai.zone)
-7. Next you'll need to create an organization and user to use Atlas.
+1. `npm run docker-setup`
+2. prepare an auth0 app/api and openai key
+3. create and fill `./.env.api` (create it by copying `./.env.api.template`)
+4. create and fill `./.env.next` (create it by copying `./.env.next.template`)
 
 # starting atlas
 
-atlas requires multiple pieces of software to run. in order to assist, the root package.json is equipped with some helper scripts. `start` and `reset` can be used to start and reset the local development environment. once the software has started, direct your browser to [](https://local.atlasai.zone).
+1. `npm run docker` and open [](https://local.atlasai.zone)
+
+atlas requires multiple pieces of software to run. in order to assist, the root package.json is equipped with some helper scripts. `npm run docker` and `npm run docker-reset` can be used to start and reset the local development environment. once the software has started, direct your browser to [](https://local.atlasai.zone).
 
 this is too early for production, but if you were going to run it in production at scale, you'd likely want to deploy it with different scripts.
 

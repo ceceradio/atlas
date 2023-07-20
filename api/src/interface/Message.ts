@@ -1,6 +1,6 @@
 import { IConversation } from '@/interface/Conversation'
 import { IUser } from '@/interface/User'
-import type {
+import {
   ChatCompletionRequestMessage,
   ChatCompletionRequestMessageRoleEnum,
 } from 'openai'
@@ -8,13 +8,12 @@ import type {
 export type IMessage = {
   uuid: string
   author: IUser | null
-  authorType: AuthorTypes
+  authorType: ChatCompletionRequestMessageRoleEnum
   conversation: IConversation
   content: string
   created: Date
   toOpenAI(): ChatCompletionRequestMessageWithUuid
 }
-export type AuthorTypes = ChatCompletionRequestMessageRoleEnum
 
 export type ChatCompletionRequestMessageWithUuid =
   ChatCompletionRequestMessage & { uuid: string }

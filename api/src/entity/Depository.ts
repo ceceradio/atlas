@@ -7,6 +7,7 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  Relation,
 } from 'typeorm'
 
 @Entity()
@@ -16,7 +17,7 @@ export class Depository implements IDepository {
 
   @ManyToOne(() => Organization, (organization) => organization.depositories)
   @JoinColumn()
-  organization: Organization
+  organization: Relation<Organization>
 
   @CreateDateColumn({
     type: 'timestamp',

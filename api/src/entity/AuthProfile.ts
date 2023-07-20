@@ -14,8 +14,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm'
-
-export type AuthProviders = 'auth0'
+import { AuthProviders } from './AuthProviders'
 
 @Entity()
 export class AuthProfile implements IAuthProfile {
@@ -26,7 +25,11 @@ export class AuthProfile implements IAuthProfile {
   @JoinColumn()
   user: User
 
-  @Column()
+  @Column({
+    type: 'enum',
+    enum: AuthProviders,
+    default: AuthProviders.AUTH0,
+  })
   provider: AuthProviders
 
   @Column()

@@ -2,10 +2,10 @@
 import { Conversation } from '@/entity/Conversation'
 import { User } from '@/entity/User'
 import {
-  AuthorTypes,
   ChatCompletionRequestMessageWithUuid,
   IMessage,
 } from '@/interface/Message'
+import { ChatCompletionRequestMessageRoleEnum } from 'openai'
 import {
   Column,
   CreateDateColumn,
@@ -15,6 +15,7 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  Relation,
 } from 'typeorm'
 
 @Entity()
@@ -28,13 +29,17 @@ export class Message implements IMessage {
 
   @ManyToOne(() => Conversation, (conversation) => conversation.messages)
   @JoinColumn()
-  conversation: Conversation
+  conversation: Relation<Conversation>
 
   @Column()
   content: string
 
-  @Column()
-  authorType: AuthorTypes
+  @Column({
+    type: 'enum',
+    enum: ChatCompletionRequestMessageRoleEnum,
+    default: ChatCompletionRequestMessageRoleEnum.System,
+  })
+  authorType: ChatCompletionRequestMessageRoleEnum
 
   @CreateDateColumn({
     type: 'timestamp',
@@ -61,7 +66,7 @@ export class Message implements IMessage {
     dataSource: DataSource | EntityManager,
     conversation: Conversation,
     author: User | null,
-    authorType: AuthorTypes,
+    authorType: ChatCompletionRequestMessageRoleEnum,
     content: string,
   ) {
     const message = dataSource.getRepository(Message).create({

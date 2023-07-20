@@ -20,6 +20,7 @@
   "include": ["**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules"],
   "ts-node": {
-    "require": ["tsconfig-paths/register", "dotenv/config"]
+    "transpileOnly": true,
+    "require": ["tsconfig-paths/register"]
   }
 }

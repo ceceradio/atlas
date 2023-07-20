@@ -9,15 +9,20 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  Relation,
 } from 'typeorm'
-import { AuthProviders } from './AuthProfile'
+import { AuthProviders } from './AuthProviders'
 
 @Entity()
 export class ServicerAuthProfile implements IServicerAuthProfile {
   @PrimaryGeneratedColumn('uuid')
   uuid: string
 
-  @Column()
+  @Column({
+    type: 'enum',
+    enum: AuthProviders,
+    default: AuthProviders.AUTH0,
+  })
   provider: AuthProviders
 
   @Column()
@@ -26,7 +31,7 @@ export class ServicerAuthProfile implements IServicerAuthProfile {
 
   @ManyToOne(() => Servicer, (servicer) => servicer.authProfiles)
   @JoinColumn()
-  servicer: Servicer
+  servicer: Relation<Servicer>
 
   @CreateDateColumn({
     type: 'timestamp',

@@ -29,7 +29,7 @@ export class Conversation implements IConversation {
 
   @ManyToOne(() => User, (user) => user.createdConversations)
   @JoinColumn()
-  creator: User
+  creator: Relation<User>
 
   @ManyToOne(() => Organization, (organization) => organization.conversations)
   @JoinColumn()
@@ -112,11 +112,13 @@ export class Conversation implements IConversation {
         })
         // create text strings for each message
         .map(({ role, content, name, message }) => {
-          return `${name} (${role}) (${message.created}): ${content}`
+          return `At ${message.created.toLocaleTimeString()}, ${
+            role === 'assistant' ? 'an assistant' : `a ${role}`
+          } name of ${name} said: ${content}`
         })
         .slice(-1 * (tail || 0))
-        // join all messages by new line
-        .join('\n')
+        // join all messages by double new line
+        .join('\n\n')
     )
   }
 
@@ -125,10 +127,12 @@ export class Conversation implements IConversation {
       messages
         // create text strings for each message
         .map(({ role, content, name, createdAt }) => {
-          return `(${role}) ${name} at ${createdAt}: ${content}`
+          return `At ${createdAt.toLocaleTimeString()}, ${
+            role === 'assistant' ? 'an assistant' : `a ${role}`
+          } name of ${name} said: ${content}`
         })
-        // join all messages by new line
-        .join('\n')
+        // join all messages by double new line
+        .join('\n\n')
     )
   }
 }
