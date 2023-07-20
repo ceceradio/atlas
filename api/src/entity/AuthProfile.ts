@@ -7,14 +7,14 @@ import {
   CreateDateColumn,
   DataSource,
   Entity,
+  EntityManager,
   Equal,
   Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm'
-
-export type AuthProviders = 'auth0'
+import { AuthProviders } from './AuthProviders'
 
 @Entity()
 export class AuthProfile implements IAuthProfile {
@@ -25,7 +25,11 @@ export class AuthProfile implements IAuthProfile {
   @JoinColumn()
   user: User
 
-  @Column()
+  @Column({
+    type: 'enum',
+    enum: AuthProviders,
+    default: AuthProviders.AUTH0,
+  })
   provider: AuthProviders
 
   @Column()
@@ -39,7 +43,7 @@ export class AuthProfile implements IAuthProfile {
   public created: Date
 
   static async create(
-    dataSource: DataSource,
+    dataSource: DataSource | EntityManager,
     user: User,
     provider: AuthProviders,
     providerId: string,
@@ -53,7 +57,7 @@ export class AuthProfile implements IAuthProfile {
   }
 
   static async getUser(
-    dataSource: DataSource,
+    dataSource: DataSource | EntityManager,
     provider: AuthProviders,
     providerId: string,
   ): Promise<IUser | undefined> {

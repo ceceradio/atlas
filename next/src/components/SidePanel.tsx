@@ -1,4 +1,4 @@
-import { getConversations } from '@/client/conversatons'
+import { getConversations } from '@/client/conversations'
 import useAtlasApi from '@/helpers/useAtlasApi'
 import useAtlasSocket from '@/helpers/useAtlasSocket'
 import { AtlasSocketMessage, IAPIConversation, IConversation } from '@atlas/api'
@@ -37,7 +37,7 @@ function SidePanelDisplay({ showBack, list }: SidePanelProps) {
   const router = useRouter()
 
   return (
-    <VStack alignItems="flex-end">
+    <VStack padding="1rem" alignItems="flex-end">
       {showBack && (
         <Box>
           <Button onClick={() => router.push(`/zone`)}>Back</Button>
@@ -81,6 +81,8 @@ const SlideBox = styled.div(({ slidden }: { slidden: boolean }) => ({
   background: '#ddd',
   height: '100vh',
   width: '350px',
+  position: 'sticky',
+  top: 0,
   transform: `translateX(${slidden ? '-300px' : '0'})`,
   transition: 'width 333ms ease-in-out, transform 333ms ease-in-out',
 }))

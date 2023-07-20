@@ -1,4 +1,5 @@
 'use server'
+import { ChatCompletionRequestMessageWithTime } from '@/atlas'
 import { Message } from '@/entity/Message'
 import { Organization } from '@/entity/Organization'
 import { User } from '@/entity/User'
@@ -8,6 +9,7 @@ import {
   CreateDateColumn,
   DataSource,
   Entity,
+  EntityManager,
   Equal,
   FindOptionsRelations,
   JoinColumn,
@@ -27,7 +29,7 @@ export class Conversation implements IConversation {
 
   @ManyToOne(() => User, (user) => user.createdConversations)
   @JoinColumn()
-  creator: User
+  creator: Relation<User>
 
   @ManyToOne(() => Organization, (organization) => organization.conversations)
   @JoinColumn()
@@ -42,7 +44,7 @@ export class Conversation implements IConversation {
   })
   public created: Date
 
-  static async create(dataSource: DataSource, creator: User) {
+  static async create(dataSource: DataSource | EntityManager, creator: User) {
     const conversation = dataSource.getRepository(Conversation).create({
       creator,
       organization: creator.organization,
@@ -51,7 +53,7 @@ export class Conversation implements IConversation {
   }
 
   static async listByOrganization(
-    dataSource: DataSource,
+    dataSource: DataSource | EntityManager,
     organization: Organization,
   ) {
     return dataSource.getRepository(Conversation).find({
@@ -62,7 +64,10 @@ export class Conversation implements IConversation {
     })
   }
 
-  static async listByCreator(dataSource: DataSource, creator: User) {
+  static async listByCreator(
+    dataSource: DataSource | EntityManager,
+    creator: User,
+  ) {
     return dataSource.getRepository(Conversation).find({
       where: { creator: Equal(creator.uuid) },
       order: {
@@ -72,11 +77,11 @@ export class Conversation implements IConversation {
   }
 
   static async get(
-    dataSource: DataSource,
+    dataSource: DataSource | EntityManager,
     uuid: string,
     relations?: FindOptionsRelations<Conversation>,
-  ): Promise<IConversation | undefined> {
-    const [conversation] = await dataSource.getRepository(Conversation).find({
+  ): Promise<Conversation | null> {
+    return dataSource.getRepository(Conversation).findOne({
       where: { uuid },
       order: {
         created: 'ASC',
@@ -89,6 +94,45 @@ export class Conversation implements IConversation {
         },
       },
     })
-    return conversation
+  }
+  toChatString(tail?: number) {
+    if (!this.messages || this.messages.length <= 0)
+      return '[conversation.messages missing. is the relation not loaded?]'
+    return Conversation.toOpenAIChatString(this.messages, tail)
+  }
+
+  static toOpenAIChatString(messages: Message[], tail?: number) {
+    return (
+      messages
+        // remove system messages
+        .filter((message) => message.authorType !== 'system')
+        // go to open AI format
+        .map((message) => {
+          return { ...message.toOpenAI(), message }
+        })
+        // create text strings for each message
+        .map(({ role, content, name, message }) => {
+          return `At ${message.created.toLocaleTimeString()}, ${
+            role === 'assistant' ? 'an assistant' : `a ${role}`
+          } name of ${name} said: ${content}`
+        })
+        .slice(-1 * (tail || 0))
+        // join all messages by double new line
+        .join('\n\n')
+    )
+  }
+
+  static toChatString(messages: ChatCompletionRequestMessageWithTime[]) {
+    return (
+      messages
+        // create text strings for each message
+        .map(({ role, content, name, createdAt }) => {
+          return `At ${createdAt.toLocaleTimeString()}, ${
+            role === 'assistant' ? 'an assistant' : `a ${role}`
+          } name of ${name} said: ${content}`
+        })
+        // join all messages by double new line
+        .join('\n\n')
+    )
   }
 }

@@ -1,7 +1,5 @@
 #!/bin/bash
 
-source .env
-
 mkdir certs
 
 openssl genrsa -out certs/key.pem

@@ -3,7 +3,7 @@ import { Conversation } from '@/entity/Conversation'
 import { Message } from '@/entity/Message'
 import { DataSource } from 'typeorm'
 
-export default async function retitleConversation(
+export default async function respond(
   dataSource: DataSource,
   uuid: string,
 ): Promise<string> {
@@ -13,17 +13,9 @@ export default async function retitleConversation(
     messages: true,
   })
   if (!conversation) throw new Error('no conversation found')
-  const title = await atlasApi.titleConversation(conversation)
-  await Message.create(
-    dataSource,
-    conversation,
-    null,
-    'system',
-    `Topic was changed to: ${title}`,
-  )
-  await dataSource.getRepository(Conversation).save({
-    uuid: conversation.uuid,
-    title,
-  })
-  return conversation.title
+  const { content } = await atlasApi.respondToConversation(conversation)
+  if (!content) throw new Error('no content found')
+  await Message.create(dataSource, conversation, null, 'assistant', content)
+
+  return content
 }

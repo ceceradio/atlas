@@ -1,5 +1,5 @@
 import { messageOrganizationQueue } from '@/queue/messageOrganization'
-import { RawData, Server } from 'ws'
+import { RawData, Server, ServerOptions, WebSocketServer } from 'ws'
 import { Antennae } from './Antennae'
 import { UserSocket } from './UserSocket'
 import { identify } from './identify'
@@ -22,28 +22,38 @@ export type Joined = {
 
 export const organizationAntennae: Record<string, Antennae> = {}
 
-export const wsServer = new Server({ port: 3002 })
-wsServer.on('error', console.error)
-wsServer.on('connection', (socket) => {
-  const userSocket = new UserSocket(socket)
-  socket.on(
-    'message',
-    parseMessage(
-      requireIdentification(userSocket, (parsedMessage) => {
-        const { type } = parsedMessage
-        /* ADD NEW FUNCTIONS HERE */
-        if (type === 'joined')
-          return joined(userSocket, parsedMessage as AtlasSocketMessage<Joined>)
-        if (type === 'update')
-          return update(userSocket, parsedMessage as AtlasSocketMessage<Update>)
-      }),
-    ),
-  )
+export class AtlasWebsocketServer {
+  server: WebSocketServer
+  constructor(options: ServerOptions) {
+    this.server = new Server(options)
+    this.server.on('error', console.error)
+    this.server.on('connection', (socket) => {
+      const userSocket = new UserSocket(socket)
+      socket.on(
+        'message',
+        parseMessage(requireIdentification(userSocket, this.reducer)),
+      )
+    })
+  }
+  reducer(userSocket: UserSocket, parsedMessage: AtlasSocketMessage<object>) {
+    const { type } = parsedMessage
+    /* ADD NEW FUNCTIONS HERE */
+    if (type === 'joined')
+      return joined(userSocket, parsedMessage as AtlasSocketMessage<Joined>)
+    if (type === 'update')
+      return update(userSocket, parsedMessage as AtlasSocketMessage<Update>)
+  }
+}
+
+messageOrganizationQueue.process(async (job) => {
+  const { uuid, message } = job.data
+  await routeToOrganization(uuid, message)
+  return true
 })
 
 function requireIdentification<T>(
   userSocket: UserSocket,
-  fn: (parsedMessage: AtlasSocketMessage<object>) => T,
+  fn: (userSocket: UserSocket, parsedMessage: AtlasSocketMessage<object>) => T,
 ) {
   return (parsedMessage: AtlasSocketMessage<object>): T | void => {
     const { type } = parsedMessage
@@ -51,8 +61,8 @@ function requireIdentification<T>(
       identify(userSocket, parsedMessage as AtlasSocketMessage<Identify>)
     else if (!userSocket.isIdentified()) {
       console.error('no identification')
-      userSocket.close()
-    } else fn(parsedMessage)
+      //userSocket.close()
+    } else fn(userSocket, parsedMessage)
   }
 }
 
@@ -64,12 +74,6 @@ function parseMessage<T>(fn: (parsedMessage: AtlasSocketMessage<object>) => T) {
     fn(parsedMessage)
   }
 }
-
-messageOrganizationQueue.process(async (job) => {
-  const { uuid, message } = job.data
-  await routeToOrganization(uuid, message)
-  return true
-})
 
 export async function routeToOrganization<T>(
   uuid: string | undefined,

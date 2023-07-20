@@ -1,10 +1,10 @@
 import { AtlasError } from '@/app/errors'
-import AtlasAPI, { openingMessages } from '@/atlas'
+import { AtlasAPI } from '@/atlas'
 import { postgres } from '@/data-source'
 import { Conversation } from '@/entity/Conversation'
 import { Message } from '@/entity/Message'
-import { IAPIConversation, IConversation } from '@/interface/Conversation'
-import { IUser } from '@/interface/User'
+import { User } from '@/entity/User'
+import { IAPIConversation } from '@/interface/Conversation'
 import { retitleQueue } from '@/queue/retitle'
 import express from 'express'
 import { authorize } from './authorize'
@@ -12,18 +12,7 @@ import { authorize } from './authorize'
 export const conversationApp = express()
 conversationApp.use(authorize)
 
-function getFullOpenAIMessages(conversation: Conversation) {
-  return openingMessages.concat(
-    conversation.messages.map((message) => message.toOpenAI()),
-  )
-}
-
-function wrapMessages(conversation: Conversation): IAPIConversation {
-  return {
-    ...conversation,
-    messages: getFullOpenAIMessages(conversation),
-  }
-}
+const atlasApi = new AtlasAPI()
 
 conversationApp.get('/conversations', async (request, response) => {
   const { user } = response.locals
@@ -39,7 +28,7 @@ conversationApp.get('/conversation/:uuid', async (request, response) => {
   // look up prior conversation
   const conversation = await Conversation.get(postgres, uuid)
   if (!conversation) return response.status(404)
-  return response.json(wrapMessages(conversation))
+  return response.json(atlasApi.withOpeningMessages(conversation))
 })
 
 type ConversationPatchBody = { content: string }
@@ -52,10 +41,11 @@ conversationApp.patch('/conversation/:uuid', async (request, response) => {
   // look up prior conversation
   const conversation = await Conversation.get(postgres, uuid)
   if (!conversation) return response.status(404)
-  // add background job
-  retitleQueue.add({ uuid: conversation.uuid }, { delay: 5000 })
   // create message from user and save to database
-  return response.json(await performChatExchange(content, user, conversation))
+  const data = await performChatExchange(content, user, conversation)
+  // add background job
+  retitleQueue.add({ uuid: conversation.uuid }, { delay: 1000 })
+  return response.json(data)
 })
 
 type ConversationPostBody = { content: string }
@@ -67,17 +57,23 @@ conversationApp.post('/conversation', async (request, response) => {
 
   // create a conversation and add the opening message to it
   const conversation = await Conversation.create(postgres, user)
-  // add background job
-  retitleQueue.add({ uuid: conversation.uuid }, { delay: 5000 })
-  await performChatExchange('', user, conversation)
+  await openConversation(user, conversation)
 
-  return response.json(await performChatExchange(content, user, conversation))
+  const data = await performChatExchange(content, user, conversation)
+  // add background job
+  retitleQueue.add({ uuid: conversation.uuid }, { delay: 1000 })
+
+  return response.json(data)
 })
 
+async function openConversation(user: User, conversation: Conversation) {
+  return performChatExchange('', user, conversation)
+}
+
 async function performChatExchange(
-  content: string | null,
-  user: IUser,
-  conversation: IConversation,
+  content: string,
+  user: User,
+  conversation: Conversation,
 ): Promise<IAPIConversation> {
   if (!user) throw new AtlasError()
   if (content)
@@ -93,12 +89,12 @@ async function performChatExchange(
     conversation,
     user,
     'assistant',
-    await AtlasAPI.askToRespond(getFullOpenAIMessages(conversation)),
+    (await atlasApi.respondToConversation(conversation)).content || '',
   )
   // refresh
   conversation = (await Conversation.get(
     postgres,
     conversation.uuid,
   )) as Conversation // guaranteed to exist
-  return wrapMessages(conversation)
+  return atlasApi.withOpeningMessages(conversation)
 }

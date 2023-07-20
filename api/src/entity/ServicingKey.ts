@@ -8,6 +8,7 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  Relation,
 } from 'typeorm'
 
 @Entity()
@@ -17,7 +18,7 @@ export class ServicingKey implements IServicingKey {
 
   @ManyToOne(() => Organization, (organization) => organization.users)
   @JoinColumn()
-  organization: Organization
+  organization: Relation<Organization>
 
   @ManyToOne(() => Servicer, (servicer) => servicer.servicingKeys)
   @JoinColumn()

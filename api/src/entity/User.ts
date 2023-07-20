@@ -10,6 +10,7 @@ import {
   CreateDateColumn,
   DataSource,
   Entity,
+  EntityManager,
   Equal,
   Index,
   JoinColumn,
@@ -47,7 +48,10 @@ export class User implements IUser {
   })
   public created: Date
 
-  static async create(dataSource: DataSource, organization: IOrganization) {
+  static async create(
+    dataSource: DataSource | EntityManager,
+    organization: IOrganization,
+  ) {
     const user = dataSource.getRepository(User).create({
       organization,
     })
@@ -68,7 +72,7 @@ export class User implements IUser {
     return result
   }
   static async getByInvite(
-    dataSource: DataSource,
+    dataSource: DataSource | EntityManager,
     inviteCode: string,
   ): Promise<User> {
     const [user] = await dataSource.getRepository(User).find({
@@ -79,7 +83,7 @@ export class User implements IUser {
     return user
   }
 
-  static async list(dataSource: DataSource) {
+  static async list(dataSource: DataSource | EntityManager) {
     return dataSource.getRepository(User).find({
       order: {
         created: 'ASC',

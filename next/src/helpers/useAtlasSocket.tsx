@@ -26,14 +26,14 @@ export default function useAtlasSocket() {
   } = useWebSocket(
     'wss://local.atlasai.zone/ws/',
     {
-      shouldReconnect: () => true,
+      shouldReconnect: (e) => {
+        console.info('CloseEvent', e)
+        return true
+      },
+      reconnectInterval: 1000,
       share: true,
       onClose: () => {
-        console.debug('ws closed')
         setIdentificationState(IdentificationState.UNIDENTIFIED)
-      },
-      onOpen: async () => {
-        console.debug('ws opened')
       },
       onMessage: (event) => {
         const message: AtlasSocketMessage<unknown> = JSON.parse(event.data)
