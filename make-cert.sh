@@ -1,8 +1,8 @@
 #!/bin/bash
 
-mkdir certs
+mkdir nginx/certs
 
-openssl genrsa -out certs/key.pem
+openssl genrsa -out nginx/certs/key.pem
 
 openssl req \
     -new \
@@ -11,6 +11,6 @@ openssl req \
     -nodes \
     -x509 \
     -subj "/C=US/ST=oned/L=ocal/O=atlasai.zone/CN=local.atlasai.zone" \
-    -keyout certs/local.atlasai.zone.key \
-    -out certs/local.atlasai.zone.cert
+    -keyout nginx/certs/local.atlasai.zone.key \
+    -out nginx/certs/local.atlasai.zone.cert
 

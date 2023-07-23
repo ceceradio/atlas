@@ -1,4 +1,5 @@
 certs
+nginx/certs
 node_modules
 *.env*
 *.key

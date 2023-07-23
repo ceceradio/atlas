@@ -18,4 +18,4 @@ RUN apk update && apk add python3 postgresql-client
 
 RUN npm install
 
-CMD npm start
+CMD npm run start-node
