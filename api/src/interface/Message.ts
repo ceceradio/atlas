@@ -17,3 +17,6 @@ export type IMessage = {
 
 export type ChatCompletionRequestMessageWithUuid =
   ChatCompletionRequestMessage & { uuid: string }
+export type WithTime<T extends ChatCompletionRequestMessage> = T & {
+  createdAt: Date
+}

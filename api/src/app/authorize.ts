@@ -1,5 +1,6 @@
 import { postgres } from '@/data-source'
 import { AuthProfile } from '@/entity/AuthProfile'
+import { AuthProviders } from '@/entity/AuthProviders'
 import express from 'express'
 import { auth } from 'express-oauth2-jwt-bearer'
 
@@ -16,7 +17,7 @@ export const authorize: express.Handler = (request, response, next) => {
   checkJwt(request, response, () => {
     const providerId = request.auth?.payload?.sub
     if (!providerId) return response.status(400)
-    AuthProfile.getUser(postgres, 'auth0', providerId)
+    AuthProfile.getUser(postgres, AuthProviders.AUTH0, providerId)
       .then((user) => {
         response.locals.user = user
         next()

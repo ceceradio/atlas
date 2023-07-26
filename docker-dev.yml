@@ -1,0 +1,4 @@
+services:
+  atlas:
+    volumes:
+      - .:/usr/src/app/

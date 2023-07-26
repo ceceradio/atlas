@@ -35,7 +35,10 @@ export class AtlasWebsocketServer {
       )
     })
   }
-  reducer(userSocket: UserSocket, parsedMessage: AtlasSocketMessage<object>) {
+  private reducer(
+    userSocket: UserSocket,
+    parsedMessage: AtlasSocketMessage<object>,
+  ) {
     const { type } = parsedMessage
     /* ADD NEW FUNCTIONS HERE */
     if (type === 'joined')

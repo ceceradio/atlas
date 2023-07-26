@@ -12,7 +12,9 @@ export default async function responseEvaluation(
     messages: true,
   })
   if (!conversation) throw new Error('no conversation found')
-  const shouldAtlasRespond = await atlasApi.shouldRespond(conversation)
+  const shouldAtlasRespond = await atlasApi.responder.shouldRespond(
+    conversation,
+  )
 
   return new Boolean(shouldAtlasRespond).toString()
 }

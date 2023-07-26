@@ -12,8 +12,6 @@ import { authorize } from './authorize'
 export const conversationApp = express()
 conversationApp.use(authorize)
 
-const atlasApi = new AtlasAPI()
-
 conversationApp.get('/conversations', async (request, response) => {
   const { user } = response.locals
   if (!user) return response.status(400)
@@ -25,24 +23,25 @@ conversationApp.get('/conversations', async (request, response) => {
 conversationApp.get('/conversation/:uuid', async (request, response) => {
   // validate input @todo
   const { uuid } = request.params
+  const { atlas } = response.locals
   // look up prior conversation
   const conversation = await Conversation.get(postgres, uuid)
   if (!conversation) return response.status(404)
-  return response.json(atlasApi.withOpeningMessages(conversation))
+  return response.json(atlas.responder.withOpeningMessages(conversation))
 })
 
 type ConversationPatchBody = { content: string }
 conversationApp.patch('/conversation/:uuid', async (request, response) => {
   const { content }: ConversationPatchBody = await request.body
   const { uuid } = request.params
-  const { user } = response.locals
+  const { user, atlas } = response.locals
   if (!content || !uuid) return response.status(400)
   if (!user) return response.status(401)
   // look up prior conversation
   const conversation = await Conversation.get(postgres, uuid)
   if (!conversation) return response.status(404)
   // create message from user and save to database
-  const data = await performChatExchange(content, user, conversation)
+  const data = await performChatExchange(atlas, content, user, conversation)
   // add background job
   retitleQueue.add({ uuid: conversation.uuid }, { delay: 1000 })
   return response.json(data)
@@ -51,26 +50,31 @@ conversationApp.patch('/conversation/:uuid', async (request, response) => {
 type ConversationPostBody = { content: string }
 conversationApp.post('/conversation', async (request, response) => {
   const { content }: ConversationPostBody = await request.body
-  const { user } = response.locals
+  const { user, atlas } = response.locals
   if (!content) return response.status(400)
   if (!user) return response.status(401)
 
   // create a conversation and add the opening message to it
   const conversation = await Conversation.create(postgres, user)
-  await openConversation(user, conversation)
+  await openConversation(atlas, user, conversation)
 
-  const data = await performChatExchange(content, user, conversation)
+  const data = await performChatExchange(atlas, content, user, conversation)
   // add background job
   retitleQueue.add({ uuid: conversation.uuid }, { delay: 1000 })
 
   return response.json(data)
 })
 
-async function openConversation(user: User, conversation: Conversation) {
-  return performChatExchange('', user, conversation)
+async function openConversation(
+  atlas: AtlasAPI,
+  user: User,
+  conversation: Conversation,
+) {
+  return performChatExchange(atlas, '', user, conversation)
 }
 
 async function performChatExchange(
+  atlas: AtlasAPI,
   content: string,
   user: User,
   conversation: Conversation,
@@ -89,12 +93,12 @@ async function performChatExchange(
     conversation,
     user,
     'assistant',
-    (await atlasApi.respondToConversation(conversation)).content || '',
+    (await atlas.responder.respondToConversation(conversation)).content || '',
   )
   // refresh
   conversation = (await Conversation.get(
     postgres,
     conversation.uuid,
   )) as Conversation // guaranteed to exist
-  return atlasApi.withOpeningMessages(conversation)
+  return atlas.responder.withOpeningMessages(conversation)
 }
