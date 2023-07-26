@@ -1,10 +1,16 @@
 import { WithTime } from '@/interface'
-import { Client, Events, GatewayIntentBits, Message } from 'discord.js'
+import {
+  Client,
+  Events,
+  GatewayIntentBits,
+  Message,
+  Partials,
+} from 'discord.js'
 import { ChatCompletionRequestMessage, OpenAIApi } from 'openai'
 import { AtlasResponder } from '../responder'
 import { AtlasDiscordResponder } from './responder'
 
-const CHANNEL_ID = '1071516705806893187'
+const CHANNEL_ID = '1071516705806893187' // @todo
 
 export class AtlasDiscord extends AtlasResponder {
   responder: AtlasDiscordResponder
@@ -14,11 +20,14 @@ export class AtlasDiscord extends AtlasResponder {
     super(openai)
     // Create a new client instance
     this.client = new Client({
+      partials: [Partials.Channel],
       intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.DirectMessageTyping,
+        GatewayIntentBits.DirectMessages,
       ],
     })
     this.attachEventsToClient()
@@ -74,7 +83,7 @@ export class AtlasDiscord extends AtlasResponder {
 
     this.client.on(Events.MessageCreate, async (message) => {
       if (this.isAtlas(message)) return
-      if (message.channelId !== CHANNEL_ID) return
+      if (!this.isAllowedToRespond(message)) return
 
       await this.responder.tryResponding(message, 6)
     })
@@ -82,5 +91,10 @@ export class AtlasDiscord extends AtlasResponder {
 
   isAtlas(message: Message<boolean>) {
     return message.author.username === 'Atlas'
+  }
+  isAllowedToRespond(message: Message<boolean>) {
+    if (message.channelId === CHANNEL_ID) return true
+    if (!message.inGuild()) return true
+    return false
   }
 }

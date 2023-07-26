@@ -59,6 +59,10 @@ export class AtlasAPI extends AtlasCore {
       ).content || ''
     )
   }
+
+  close() {
+    this.discord.client.destroy()
+  }
 }
 
 export const atlasApi = new AtlasAPI()

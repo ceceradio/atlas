@@ -8,6 +8,7 @@
     "install:api": "cd api && npm install",
     "install:next": "cd next && npm install",
     "docker": "docker compose -f docker-compose.yml -f docker-dev.yml up",
+    "docker-remote": "docker compose up",
     "docker-setup": "npm run make-cert && npm run make-hosts",
     "docker-reset": "docker compose down --volumes",
     "make-migration": "npx typeorm-ts-node-commonjs migration:generate -d ./api/src/data-source.ts ./api/src/migration/migration",
@@ -15,8 +16,8 @@
     "make-hosts": "hostile set 127.0.0.1 local.atlasai.zone",
     "start": "npm run docker",
     "start-node": "run-p start:*",
-    "start:next": "source .env.next && cd next && npm run dev",
-    "start:api": "source .env.api && cd api && npm start",
+    "start:next": "cd next && npm run dev",
+    "start:api": "cd api && npm start",
     "test": "run-s test:*",
     "test:next": "cd next && npm test",
     "test:api": "cd api && npm test"
