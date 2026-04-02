@@ -1,3 +1,4 @@
+.DS_Store
 certs
 nginx/certs
 node_modules

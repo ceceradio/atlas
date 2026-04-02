@@ -1,7 +1,5 @@
-import type {
-  ChatCompletionRequestMessageWithUuid,
-  IMessage,
-} from '@/interface/Message'
+import { IAtlasMessage } from '@/atlas/IAtlas'
+import type { IMessage } from '@/interface/Message'
 import type { IOrganization } from '@/interface/Organization'
 import type { IUser } from '@/interface/User'
 
@@ -14,5 +12,5 @@ export type IConversation = {
   created: Date
 }
 export type IAPIConversation = Omit<IConversation, 'messages'> & {
-  messages: ChatCompletionRequestMessageWithUuid[]
+  messages: IAtlasMessage[]
 }

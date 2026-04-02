@@ -1,12 +1,12 @@
-import { AtlasAPI } from '@/atlas'
 import { Conversation } from '@/entity/Conversation'
+import { AtlasPlugins } from '@/plugins'
 import { DataSource } from 'typeorm'
 
 export default async function responseEvaluation(
   dataSource: DataSource,
   uuid: string,
 ): Promise<string> {
-  const atlasApi = new AtlasAPI()
+  const atlasApi = new AtlasPlugins()
   const conversation = await Conversation.get(dataSource, uuid, {
     organization: true,
     messages: true,

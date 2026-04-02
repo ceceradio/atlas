@@ -1,10 +1,9 @@
 'use server'
+import { IAtlasMessage } from '@/atlas/IAtlas'
 import { Message } from '@/entity/Message'
 import { Organization } from '@/entity/Organization'
 import { User } from '@/entity/User'
-import { WithTime } from '@/interface'
-import { IConversation } from '@/interface/Conversation'
-import { ChatCompletionRequestMessage } from 'openai'
+import { IAPIConversation, IConversation } from '@/interface/Conversation'
 import {
   Column,
   CreateDateColumn,
@@ -99,17 +98,17 @@ export class Conversation implements IConversation {
   toChatString(tail?: number) {
     if (!this.messages || this.messages.length <= 0)
       return '[conversation.messages missing. is the relation not loaded?]'
-    return Conversation.toOpenAIChatString(this.messages, tail)
+    return Conversation.toAtlasChatString(this.messages, tail)
   }
 
-  static toOpenAIChatString(messages: Message[], tail?: number) {
+  static toAtlasChatString(messages: Message[], tail?: number) {
     return (
       messages
         // remove system messages
         .filter((message) => message.authorType !== 'system')
         // go to open AI format
         .map((message) => {
-          return { ...message.toOpenAI(), message }
+          return { ...message.toAtlasMessage(), message }
         })
         // create text strings for each message
         .map(({ role, content, name, message }) => {
@@ -123,17 +122,30 @@ export class Conversation implements IConversation {
     )
   }
 
-  static toChatString(messages: WithTime<ChatCompletionRequestMessage>[]) {
+  static toChatString(messages: IAtlasMessage[]) {
     return (
       messages
         // create text strings for each message
-        .map(({ role, content, name, createdAt }) => {
-          return `At ${createdAt.toLocaleTimeString()}, ${
-            role === 'assistant' ? 'an assistant' : `a ${role}`
-          } name of ${name} said: ${content}`
+        .map((message) => {
+          if (message.role === 'tool_call' || message.role === 'tool_response')
+            return ''
+          const nameOf = 'name' in message ? ` name of ${message.name}` : ''
+          return `At ${new Date(message.time).toLocaleTimeString()}, ${
+            message.role === 'assistant' ? 'an assistant' : `a ${message.role}`
+          }${nameOf} said: ${message.content as string}`
         })
         // join all messages by double new line
         .join('\n\n')
     )
+  }
+  toApi(): IAPIConversation {
+    return {
+      uuid: this.uuid,
+      title: this.title,
+      created: this.created,
+      creator: this.creator,
+      organization: this.organization,
+      messages: this.messages.map((message) => message.toAtlasMessage()),
+    }
   }
 }

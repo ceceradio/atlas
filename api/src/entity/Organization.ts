@@ -3,8 +3,9 @@ import { Conversation } from '@/entity/Conversation'
 import { Depository } from '@/entity/Depository'
 import { ServicingKey } from '@/entity/ServicingKey'
 import { User } from '@/entity/User'
-import { IOrganization } from '@/interface/Organization'
+import { IAPIOrganization, IOrganization } from '@/interface/Organization'
 import {
+  Column,
   CreateDateColumn,
   DataSource,
   Entity,
@@ -18,6 +19,9 @@ import {
 export class Organization implements IOrganization {
   @PrimaryGeneratedColumn('uuid')
   uuid: string
+
+  @Column()
+  name: string
 
   @OneToMany(() => ServicingKey, (servicingKey) => servicingKey.organization)
   servicingKeys: Promise<Relation<ServicingKey>[]>
@@ -58,5 +62,13 @@ export class Organization implements IOrganization {
         created: 'ASC',
       },
     })
+  }
+
+  toApi(): IAPIOrganization {
+    return {
+      uuid: this.uuid,
+      name: this.name,
+      created: this.created,
+    }
   }
 }

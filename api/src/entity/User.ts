@@ -3,8 +3,7 @@ import { AuthProfile } from '@/entity/AuthProfile'
 import { Conversation } from '@/entity/Conversation'
 import { Message } from '@/entity/Message'
 import { Organization } from '@/entity/Organization'
-import { IOrganization } from '@/interface/Organization'
-import { IUser } from '@/interface/User'
+import { IAPIUser, IUser } from '@/interface/User'
 import {
   Column,
   CreateDateColumn,
@@ -24,6 +23,9 @@ import {
 export class User implements IUser {
   @PrimaryGeneratedColumn('uuid')
   uuid: string
+
+  @Column()
+  name: string
 
   @ManyToOne(() => Organization, (organization) => organization.users)
   @JoinColumn()
@@ -50,7 +52,7 @@ export class User implements IUser {
 
   static async create(
     dataSource: DataSource | EntityManager,
-    organization: IOrganization,
+    organization: Organization,
   ) {
     const user = dataSource.getRepository(User).create({
       organization,
@@ -92,5 +94,13 @@ export class User implements IUser {
         authProfiles: true,
       },
     })
+  }
+
+  toApi(): IAPIUser {
+    return {
+      uuid: this.uuid,
+      name: this.name,
+      created: this.created,
+    }
   }
 }

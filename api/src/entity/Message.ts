@@ -1,11 +1,14 @@
 'use server'
+import {
+  AtlasRoleEnums,
+  IAtlasAssistantMessage,
+  IAtlasMessage,
+  IAtlasUserMessage,
+} from '@/atlas/IAtlas'
 import { Conversation } from '@/entity/Conversation'
 import { User } from '@/entity/User'
-import {
-  ChatCompletionRequestMessageWithUuid,
-  IMessage,
-} from '@/interface/Message'
-import { ChatCompletionRequestMessageRoleEnum } from 'openai'
+import { IMessage } from '@/interface/Message'
+
 import {
   Column,
   CreateDateColumn,
@@ -36,10 +39,10 @@ export class Message implements IMessage {
 
   @Column({
     type: 'enum',
-    enum: ChatCompletionRequestMessageRoleEnum,
-    default: ChatCompletionRequestMessageRoleEnum.System,
+    enum: AtlasRoleEnums,
+    default: 'system',
   })
-  authorType: ChatCompletionRequestMessageRoleEnum
+  authorType: IAtlasMessage['role']
 
   @CreateDateColumn({
     type: 'timestamp',
@@ -47,18 +50,22 @@ export class Message implements IMessage {
   })
   public created: Date
 
-  toOpenAI(): ChatCompletionRequestMessageWithUuid {
-    const names = {
+  toAtlasMessage(): IAtlasUserMessage | IAtlasAssistantMessage {
+    if (this.authorType !== 'user' && this.authorType !== 'assistant') {
+      throw new Error('Invalid author type')
+    }
+    const names: Record<IAtlasMessage['role'], string> = {
       system: 'System',
-      user: 'Residents',
+      user: this.author?.name || 'User',
       assistant: 'Atlas',
-      function: 'Function',
+      tool_call: 'Function',
+      tool_response: 'FunctionResponse',
     }
     return {
-      uuid: this.uuid,
-      role: this.authorType,
       name: names[this.authorType],
       content: this.content,
+      time: this.created.getTime(),
+      role: this.authorType as 'assistant' | 'user',
     }
   }
 
@@ -66,14 +73,16 @@ export class Message implements IMessage {
     dataSource: DataSource | EntityManager,
     conversation: Conversation,
     author: User | null,
-    authorType: ChatCompletionRequestMessageRoleEnum,
+    authorType: IAtlasMessage['role'],
     content: string,
+    created?: Date,
   ) {
     const message = dataSource.getRepository(Message).create({
       conversation,
       author,
       authorType,
       content,
+      created,
     })
     return dataSource.getRepository(Message).save(message)
   }

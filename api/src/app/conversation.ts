@@ -1,10 +1,13 @@
 import { AtlasError } from '@/app/errors'
-import { AtlasAPI } from '@/atlas'
+import { Atlas } from '@/atlas/Atlas'
+import { IAtlasAssistantMessage } from '@/atlas/IAtlas'
+import { AtlasAssistant } from '@/atlas/assistants/Atlas/AtlasAssistant'
 import { postgres } from '@/data-source'
 import { Conversation } from '@/entity/Conversation'
 import { Message } from '@/entity/Message'
 import { User } from '@/entity/User'
 import { IAPIConversation } from '@/interface/Conversation'
+import { AtlasPlugins } from '@/plugins'
 import { retitleQueue } from '@/queue/retitle'
 import express from 'express'
 import { authorize } from './authorize'
@@ -66,7 +69,7 @@ conversationApp.post('/conversation', async (request, response) => {
 })
 
 async function openConversation(
-  atlas: AtlasAPI,
+  atlas: AtlasPlugins,
   user: User,
   conversation: Conversation,
 ) {
@@ -74,7 +77,7 @@ async function openConversation(
 }
 
 async function performChatExchange(
-  atlas: AtlasAPI,
+  atlas: AtlasPlugins,
   content: string,
   user: User,
   conversation: Conversation,
@@ -88,17 +91,39 @@ async function performChatExchange(
     conversation.uuid,
   )) as Conversation // guaranteed to exist
 
-  await Message.create(
-    postgres,
-    conversation,
-    user,
-    'assistant',
-    (await atlas.responder.respondToConversation(conversation)).content || '',
+  const messages = await conversation.messages.map((message) =>
+    message.toAtlasMessage(),
+  )
+  const response = await Atlas.processRequest({
+    messages,
+    currentUser: {
+      id: user.uuid,
+      name: user.name,
+    },
+    assistant: AtlasAssistant,
+  })
+
+  const assistantMessages = response.messages.filter(
+    (message): message is IAtlasAssistantMessage =>
+      ['assistant'].includes(message.role),
+  )
+
+  await Promise.all(
+    assistantMessages.map((message) =>
+      Message.create(
+        postgres,
+        conversation,
+        user,
+        'assistant',
+        message.content,
+        new Date(message.time),
+      ),
+    ),
   )
   // refresh
   conversation = (await Conversation.get(
     postgres,
     conversation.uuid,
   )) as Conversation // guaranteed to exist
-  return atlas.responder.withOpeningMessages(conversation)
+  return conversation.toApi()
 }

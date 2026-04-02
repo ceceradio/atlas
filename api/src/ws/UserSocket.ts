@@ -1,5 +1,6 @@
 import { postgres } from '@/data-source'
 import { AuthProfile } from '@/entity/AuthProfile'
+import { AuthProviders } from '@/entity/AuthProviders'
 import { IOrganization, IUser } from '@/interface'
 import {
   GetPublicKeyOrSecret,
@@ -53,7 +54,7 @@ export class UserSocket {
     const providerId = verification.sub
     if (!providerId) return reset()
 
-    const user = await AuthProfile.getUser(postgres, 'auth0', providerId)
+    const user = await AuthProfile.getUser(postgres, 'auth0' as AuthProviders, providerId)
     if (!user) return reset()
 
     this.user = user

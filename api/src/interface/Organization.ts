@@ -6,9 +6,16 @@ import { Relation } from 'typeorm'
 
 export type IOrganization = {
   uuid: string
+  name: string
   servicingKeys: Promise<Relation<IServicingKey>[]>
   users: Promise<Relation<IUser>[]>
   depositories: Promise<Relation<IDepository>[]>
   conversations: Relation<IConversation>[]
+  created: Date
+}
+
+export type IAPIOrganization = {
+  uuid: string
+  name: string
   created: Date
 }
