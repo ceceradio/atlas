@@ -1,0 +1,15 @@
+import { ConversationPanel } from '@/components/Conversation'
+import { SidePanelPage } from '@/components/SidePanel'
+import withAuth from '@/helpers/withAuth'
+import { useParams } from 'react-router-dom'
+
+function ConversationDetails() {
+  const { uuid } = useParams<{ uuid: string }>()
+  return (
+    <SidePanelPage>
+      <ConversationPanel uuid={uuid} />
+    </SidePanelPage>
+  )
+}
+
+export default withAuth(ConversationDetails)

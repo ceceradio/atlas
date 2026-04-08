@@ -21,12 +21,12 @@ COPY package.json ./
 COPY package-lock.json ./
 COPY api/package.json ./api/
 COPY api/package-lock.json ./api/
-COPY next/package.json ./next/
-COPY next/package-lock.json ./next/
+COPY vite/package.json ./vite/
+COPY vite/package-lock.json ./vite/
 
 RUN npm ci
 
 COPY api ./api
-COPY next ./next
+COPY vite ./vite
 
 CMD npm run start-node

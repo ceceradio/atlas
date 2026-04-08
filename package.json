@@ -6,7 +6,7 @@
   "scripts": {
     "postinstall": "run-p install:*",
     "install:api": "cd api && npm install",
-    "install:next": "cd next && npm install",
+    "install:vite": "cd vite && npm install",
     "docker": "docker compose -f docker-compose.yml -f docker-dev.yml up -d",
     "docker-remote": "docker compose up",
     "docker-setup": "npm run make-cert && npm run make-hosts",
@@ -16,10 +16,9 @@
     "make-hosts": "echo 'chocolate.local resolves via mDNS — no hosts entry needed'",
     "start": "npm run docker",
     "start-node": "run-p start:*",
-    "start:next": "cd next && npm run dev",
+    "start:vite": "cd vite && npm run dev",
     "start:api": "cd api && npm start",
     "test": "run-s test:*",
-    "test:next": "cd next && npm test",
     "test:api": "cd api && npm test",
     "repl": "cd api && PGHOST=localhost OLLAMA_HOST=localhost npm run repl"
   },

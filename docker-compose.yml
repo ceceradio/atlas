@@ -15,6 +15,7 @@ services:
       - TZ=America/New_York
     env_file:
       - .env.next
+      - .env.vite
       - .env.api
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
