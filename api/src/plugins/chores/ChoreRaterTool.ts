@@ -31,7 +31,7 @@ export const ChoreRaterTool: ITool<ChoreRaterToolArgs> = {
           required: ['chore', 'difficulty'],
         },
         description:
-          'An array of chores that were performed on the given date, along with their difficulty ratings.',
+          'An array of chores that were performed on the given date, along with their difficulty ratings. Must be a JSON array, not a string.',
       },
     },
     required: ['chores'],

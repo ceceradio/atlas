@@ -31,7 +31,7 @@ export const DateSplitterTool: ITool<DateSplitterToolArgs> = {
           required: ['date', 'message'],
         },
         description:
-          'An array where the message has been split into parts that each correspond to a single day.',
+          'An array where the message has been split into parts that each correspond to a single day. Must be a JSON array, not a string.',
       },
     },
     required: ['splits'],

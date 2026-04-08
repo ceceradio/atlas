@@ -8,21 +8,13 @@ export function convertDiscordMessagesToAtlas(
 ): IAtlasMessage[] {
   const atlasMessages: IAtlasMessage[] = []
   // add messages to another array in atlas format, reversed
-  messages.forEach((message) => {
+  messages.forEach((msg) => {
     atlasMessages.unshift({
-      // reverse order
-      name: message.author.username,
-      role: message.author.username === 'Atlas' ? 'assistant' : 'user',
-      time: message.createdAt.getTime(),
-      content: `${message.content}`,
+      name: msg.author.username,
+      role: msg.author.username === 'Atlas' ? 'assistant' : 'user',
+      time: msg.createdAt.getTime(),
+      content: `${msg.content}`,
     })
-  })
-  // current message
-  atlasMessages.push({
-    name: message.author.username,
-    role: message.author.username === 'Atlas' ? 'assistant' : 'user',
-    time: message.createdAt.getTime(),
-    content: `${message.content}`,
   })
   return atlasMessages
 }

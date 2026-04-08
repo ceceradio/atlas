@@ -57,7 +57,8 @@ export class Conversation implements IConversation {
     organization: Organization,
   ) {
     return dataSource.getRepository(Conversation).find({
-      where: { organization: Equal(organization) },
+      where: { organization: Equal(organization.uuid) },
+      relations: { creator: true },
       order: {
         created: 'DESC',
       },
@@ -68,7 +69,7 @@ export class Conversation implements IConversation {
     dataSource: DataSource | EntityManager,
     creator: User,
   ) {
-    return dataSource.getRepository(Conversation).find({
+    return await dataSource.getRepository(Conversation).find({
       where: { creator: Equal(creator.uuid) },
       order: {
         created: 'DESC',

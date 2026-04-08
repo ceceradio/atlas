@@ -4,6 +4,7 @@ import { Depository } from '@/entity/Depository'
 import { ServicingKey } from '@/entity/ServicingKey'
 import { User } from '@/entity/User'
 import { IAPIOrganization, IOrganization } from '@/interface/Organization'
+import { OrganizationSettings } from '@/interface/OrganizationSettings'
 import {
   Column,
   CreateDateColumn,
@@ -23,6 +24,9 @@ export class Organization implements IOrganization {
   @Column()
   name: string
 
+  @Column({ type: 'jsonb', default: '{}' })
+  settings: OrganizationSettings
+
   @OneToMany(() => ServicingKey, (servicingKey) => servicingKey.organization)
   servicingKeys: Promise<Relation<ServicingKey>[]>
 
@@ -41,8 +45,8 @@ export class Organization implements IOrganization {
   })
   created: Date
 
-  static async create(AppDataSource: DataSource | EntityManager) {
-    const organization = AppDataSource.getRepository(Organization).create()
+  static async create(AppDataSource: DataSource | EntityManager, name: string) {
+    const organization = AppDataSource.getRepository(Organization).create({ name })
     return await AppDataSource.getRepository(Organization).save(organization)
   }
 
@@ -68,6 +72,7 @@ export class Organization implements IOrganization {
     return {
       uuid: this.uuid,
       name: this.name,
+      settings: this.settings,
       created: this.created,
     }
   }

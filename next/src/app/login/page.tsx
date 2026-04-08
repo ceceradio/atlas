@@ -23,7 +23,7 @@ export default function Login() {
           scope: process.env.NEXT_PUBLIC_AUTH0_SCOPE,
         },
       })
-      const response = await fetch('https://local.atlasai.zone/api/whoami', {
+      const response = await fetch(`https://${process.env.NEXT_PUBLIC_DOMAIN}/api/whoami`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

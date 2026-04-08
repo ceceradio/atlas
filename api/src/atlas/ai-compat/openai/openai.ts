@@ -162,6 +162,8 @@ export const OpenAICompatibility = {
     transceiver?: (message: IAtlasEvent) => void,
     selectedToolName?: string,
     tracer?: ITracer,
+    temperature?: number,
+    maxTokens?: number,
   ): Promise<IAtlasMessage[]> => {
     const compatibleMessages = messages.map(OpenAICompatibility.mapToOpenAI)
     const compatibleTools = tools.map((tool) => mapTool(tool))
@@ -180,6 +182,8 @@ export const OpenAICompatibility = {
       model: MODEL_ID,
       tools: compatibleTools.length ? compatibleTools : undefined,
       user: userId,
+      temperature,
+      max_tokens: maxTokens,
       stream: true,
       stream_options: { include_usage: true },
       tool_choice: selectedTool,

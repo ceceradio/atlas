@@ -1,0 +1,95 @@
+import { Chore } from '@/entity/Chore'
+import { ChoreMessage } from '@/entity/ChoreMessage'
+import { getDataSource } from '@/data-source'
+import { LangfuseTracer } from '@/atlas/ai-compat/langfuse/LangfuseTracer'
+import { DatedRatedChores } from '@/plugins/chores/ChoreTypes'
+import { processChoreMessage } from '@/plugins/chores/processChoreMessage'
+import { getAtlasPlugins } from '@/plugins'
+import Queue from 'bull'
+import { TextChannel } from 'discord.js'
+import { Repository } from 'typeorm'
+import { redisConfig } from './redis'
+
+export type ChoreMessageJobData = {
+  discordMessageId: string
+  discordChannelId: string
+}
+
+export const choreMessageQueue = new Queue<ChoreMessageJobData>(
+  'choreMessage',
+  { redis: redisConfig },
+)
+
+choreMessageQueue.process(async (job) => {
+  const { discordMessageId, discordChannelId } = job.data
+
+  const client = getAtlasPlugins().discord.client
+  const channel = await client.channels.fetch(discordChannelId)
+  if (!channel?.isTextBased()) throw new Error(`Channel ${discordChannelId} is not text-based`)
+
+  const discordMessage = await (channel as TextChannel).messages.fetch(discordMessageId)
+  const { content, author, createdAt, editedAt } = discordMessage
+
+  const tracer = new LangfuseTracer('choreMessage', author.id, discordMessageId, {
+    tags: ['chores'],
+  })
+
+  const result = await processChoreMessage(content, createdAt.toISOString(), tracer)
+
+  const db = await getDataSource()
+  await db.transaction(async (manager) => {
+    const choreMessageRepo = manager.getRepository(ChoreMessage)
+    const choreRepo = manager.getRepository(Chore)
+
+    const existing = await choreMessageRepo.findOne({ where: { discordMessageId } })
+
+    if (!result) {
+      if (existing) await choreMessageRepo.remove(existing)
+      return
+    }
+
+    if (existing) {
+      await choreRepo.delete({ choreMessage: { id: existing.id } })
+      existing.editedAt = editedAt
+      await choreMessageRepo.save(existing)
+      await saveChores(choreRepo, existing, result)
+    } else {
+      const choreMessage = choreMessageRepo.create({
+        discordMessageId,
+        discordChannelId,
+        discordAuthorId: author.id,
+        discordAuthorName: author.username,
+        content,
+        postedAt: createdAt,
+        editedAt,
+      })
+      const saved = await choreMessageRepo.save(choreMessage)
+      await saveChores(choreRepo, saved, result)
+    }
+  })
+
+  return result
+})
+
+async function saveChores(
+  choreRepo: Repository<Chore>,
+  choreMessage: ChoreMessage,
+  result: DatedRatedChores[],
+) {
+  const chores = result.flatMap((dated) =>
+    dated.chores.map((rated) =>
+      choreRepo.create({
+        choreMessage,
+        description: rated.chore,
+        doneAt: new Date(dated.date),
+        difficulty: rated.difficulty,
+        aiOriginal: {
+          description: rated.chore,
+          doneAt: dated.date,
+          difficulty: rated.difficulty,
+        },
+      }),
+    ),
+  )
+  await choreRepo.save(chores)
+}

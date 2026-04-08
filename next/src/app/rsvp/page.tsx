@@ -39,7 +39,7 @@ const RSVPScreen = () => {
           scope: 'self', // Scope that exists for the API being called. You can create these through the Auth0 Management API or through the Auth0 Dashboard in the Permissions view of your API.
         },
       })
-      const response = await fetch('https://local.atlasai.zone/api/rsvp', {
+      const response = await fetch(`https://${process.env.NEXT_PUBLIC_DOMAIN}/api/rsvp`, {
         body: JSON.stringify({
           provider: 'auth0',
           inviteCode,

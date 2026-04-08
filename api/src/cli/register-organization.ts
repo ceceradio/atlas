@@ -5,6 +5,7 @@ import { DataSource, EntityManager } from 'typeorm'
 
 export default async function registerOrganization(
   dataSource: DataSource | EntityManager,
+  name: string,
 ): Promise<string> {
-  return (await Organization.create(dataSource)).uuid
+  return (await Organization.create(dataSource, name)).uuid
 }

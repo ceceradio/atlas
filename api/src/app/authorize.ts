@@ -16,7 +16,7 @@ export const checkJwt = auth(config)
 export const authorize: express.Handler = (request, response, next) => {
   checkJwt(request, response, () => {
     const providerId = request.auth?.payload?.sub
-    if (!providerId) return response.status(400)
+    if (!providerId) return response.sendStatus(400)
     AuthProfile.getUser(postgres, AuthProviders.AUTH0, providerId)
       .then((user) => {
         response.locals.user = user
@@ -24,13 +24,13 @@ export const authorize: express.Handler = (request, response, next) => {
       })
       .catch((e) => {
         console.error(e)
-        return response.status(401)
+        return response.sendStatus(401)
       })
   })
 }
 
 export const authApp = express()
 
-authApp.get('/whoami', checkJwt, (request, response) => {
+authApp.get('/whoami', authorize, (request, response) => {
   return response.json(response.locals.user)
 })

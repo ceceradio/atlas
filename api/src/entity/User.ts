@@ -53,9 +53,11 @@ export class User implements IUser {
   static async create(
     dataSource: DataSource | EntityManager,
     organization: Organization,
+    name: string,
   ) {
     const user = dataSource.getRepository(User).create({
       organization,
+      name,
     })
     user.inviteCode = this.generateInviteCode()
     return await dataSource.getRepository(User).save(user)

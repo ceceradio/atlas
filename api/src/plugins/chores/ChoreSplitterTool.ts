@@ -17,7 +17,7 @@ export const ChoreSplitterTool: ITool<ChoreSplitterToolArgs> = {
           type: 'string',
         },
         description:
-          'An array of chores that were performed on the given date.',
+          'An array of chores that were performed on the given date. Must be a JSON array, not a string.',
       },
     },
     required: ['chores'],

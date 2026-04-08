@@ -7,7 +7,7 @@ import { joined } from './joined'
 import { update } from './update'
 
 export type AtlasSocketMessage<T> = {
-  type: 'update' | 'identify' | 'identified' | 'joined'
+  type: 'update' | 'identify' | 'identified' | 'joined' | 'snapshot' | 'message'
 } & T
 export type Identify = {
   token: string
@@ -18,6 +18,16 @@ export type Update = {
 }
 export type Joined = {
   conversationId: string
+}
+export type Snapshot = {
+  conversationId: string
+  snapshot: string
+}
+export type ChatMessage = {
+  conversationId: string
+  role: string
+  name: string
+  content: string
 }
 
 export const organizationAntennae: Record<string, Antennae> = {}

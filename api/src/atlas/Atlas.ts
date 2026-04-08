@@ -1,3 +1,4 @@
+import Ajv from 'ajv'
 import {
   IAtlasCallToolRequest,
   IAtlasMessage,
@@ -10,9 +11,18 @@ import {
 import { ITracer } from './ai-compat/langfuse/ITracer'
 import { LocalCompatibility } from './ai-compat/openai/local'
 import { OpenAICompatibility } from './ai-compat/openai/openai'
+import { VllmCompatibility } from './ai-compat/openai/vllm'
 import { SystemMessageAssistantFactory } from './assistants/SystemMessageAssistantFactory'
 
-const CompatLayer = process.env.LOCAL ? LocalCompatibility : OpenAICompatibility
+const ajv = new Ajv()
+
+function resolveCompatLayer() {
+  const local = process.env.LOCAL
+  if (local === 'vllm') return VllmCompatibility
+  if (local) return LocalCompatibility
+  return OpenAICompatibility
+}
+const CompatLayer = resolveCompatLayer()
 
 export const Atlas = {
   processToolRequest: async <Args = unknown, ReturnType = unknown>(
@@ -21,8 +31,13 @@ export const Atlas = {
     messages: string[],
     userName?: string,
     tracer?: ITracer,
+    temperature = 0.1,
   ): Promise<ReturnType> => {
-    const assistant = SystemMessageAssistantFactory(systemMessage, [tool])
+    const assistant = SystemMessageAssistantFactory(
+      systemMessage,
+      [tool],
+      temperature,
+    )
     const request: IAtlasCallToolRequest<Args, ReturnType> = {
       messages: [
         {
@@ -72,11 +87,15 @@ export const Atlas = {
     request: RequestType,
     response: IAtlasResponse = { messages: [] },
     tracer?: ITracer,
+    _validationRetries = 0,
   ): Promise<ReturnType> => {
-    const totalMessages = [
+    const rawMessages = [
       await request.assistant.onSystemMessage(request, response),
       ...request.messages.filter((message) => message.role !== 'system'),
     ]
+    const totalMessages = request.assistant.filterMessages
+      ? await request.assistant.filterMessages(rawMessages)
+      : rawMessages
     const tools =
       'tool' in request ? [request.tool] : request.assistant.getTools()
 
@@ -90,6 +109,8 @@ export const Atlas = {
         : undefined,
       'tool' in request ? request.tool.name : undefined,
       tracer,
+      request.assistant.temperature,
+      request.assistant.maxTokens,
     )
 
     const toolCalls = <IAtlasToolCallMessage[]>(
@@ -126,7 +147,8 @@ export const Atlas = {
           ): toolResponse is IAtlasToolResponseMessage<ReturnType> =>
             toolResponse && toolResponse.name === request.tool.name,
         )
-        if (targetResponse) return targetResponse.content
+        if (targetResponse && !targetResponse._validationError)
+          return targetResponse.content
       }
       // filter out undefined responses
       const filteredToolResponses = <IAtlasToolResponseMessage[]>(
@@ -135,6 +157,25 @@ export const Atlas = {
       // add tool responses to messages
       request.messages.push(...responseMessages, ...filteredToolResponses)
       response.messages.push(...responseMessages, ...filteredToolResponses)
+      // count validation errors in this batch and enforce max retries
+      const validationErrors = filteredToolResponses.filter(
+        (r) => r._validationError,
+      ).length
+      if (validationErrors > 0) {
+        if (_validationRetries + validationErrors > 3)
+          throw new Error(
+            `Max tool validation retries (3) exceeded for tools: ${filteredToolResponses
+              .filter((r) => r._validationError)
+              .map((r) => r.name)
+              .join(', ')}`,
+          )
+        return await Atlas.getAIResponse(
+          request,
+          response,
+          tracer,
+          _validationRetries + validationErrors,
+        )
+      }
       // recurse
       return await Atlas.getAIResponse(request, response, tracer)
     } else {
@@ -145,24 +186,66 @@ export const Atlas = {
   },
 }
 
+function coerceStringifiedArgs(
+  args: unknown,
+  schema: Record<string, unknown>,
+): unknown {
+  if (!args || typeof args !== 'object' || Array.isArray(args)) return args
+  const properties = schema.properties as
+    | Record<string, { type?: string }>
+    | undefined
+  if (!properties) return args
+  const coerced = { ...(args as Record<string, unknown>) }
+  for (const [key, propSchema] of Object.entries(properties)) {
+    const value = coerced[key]
+    if (
+      typeof value === 'string' &&
+      (propSchema.type === 'array' || propSchema.type === 'object')
+    ) {
+      try {
+        coerced[key] = JSON.parse(value)
+      } catch {
+        /* leave as-is, AJV will catch it */
+      }
+    }
+  }
+  return coerced
+}
+
 async function runTool<Args = unknown, ReturnType = unknown>(
   request: IAtlasRequest,
   response: IAtlasResponse,
   tool: ITool<Args, ReturnType>,
-  args: Args,
+  _args: Args,
   id: string,
 ): Promise<IAtlasToolResponseMessage<ReturnType>> {
-  // validate args with ajv
-  // call tool
+  let args: Args = _args
+  args = coerceStringifiedArgs(
+    args,
+    tool.arguments as Record<string, unknown>,
+  ) as Args
+  const validate = ajv.compile(tool.arguments as object)
+  const valid = validate(args)
+  if (!valid) {
+    const errors = ajv.errorsText(validate.errors)
+    console.warn(`Tool ${tool.name} received invalid args:`, errors, args)
+    return {
+      id,
+      content:
+        `Error: invalid arguments. ${errors}. Please call the tool again with the correct arguments.` as ReturnType,
+      name: tool.name,
+      role: 'tool_response',
+      time: Date.now(),
+      _validationError: true,
+    }
+  }
 
   const content = await tool.call(request, response, args)
-
-  const toolResponse: IAtlasToolResponseMessage<ReturnType> = {
+  return {
     id,
     content,
     name: tool.name,
     role: 'tool_response',
     time: Date.now(),
-  }
-  return toolResponse
+  } satisfies IAtlasToolResponseMessage<ReturnType>
 }

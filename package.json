@@ -13,7 +13,7 @@
     "docker-reset": "docker compose down --volumes",
     "make-migration": "npx typeorm-ts-node-commonjs migration:generate -d ./api/src/data-source.ts ./api/src/migration/migration",
     "make-cert": "sh make-cert.sh",
-    "make-hosts": "hostile set 127.0.0.1 local.atlasai.zone",
+    "make-hosts": "echo 'chocolate.local resolves via mDNS — no hosts entry needed'",
     "start": "npm run docker",
     "start-node": "run-p start:*",
     "start:next": "cd next && npm run dev",
@@ -21,7 +21,7 @@
     "test": "run-s test:*",
     "test:next": "cd next && npm test",
     "test:api": "cd api && npm test",
-    "repl": "cd api && npm run repl"
+    "repl": "cd api && PGHOST=localhost OLLAMA_HOST=localhost npm run repl"
   },
   "author": "cece wren <cecelia.wren@gmail.com>",
   "license": "UNLICENSED",

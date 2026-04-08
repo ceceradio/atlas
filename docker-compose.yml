@@ -6,9 +6,13 @@ services:
     networks:
       - atlas
     restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - db
       - redis
+    environment:
+      - TZ=America/New_York
     env_file:
       - .env.next
       - .env.api
@@ -17,7 +21,7 @@ services:
   nginx:
     image: nginx:mainline-alpine
     restart: always
-    hostname: local.atlasai.zone
+    hostname: chocolate.local
     networks:
       - atlas
     ports:
@@ -36,16 +40,152 @@ services:
       - POSTGRES_PASSWORD=postgres
     volumes:
       - db:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
   redis:
     image: redis:alpine
     networks:
       - atlas
+
+  # Langfuse
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.12-alpine
+    networks:
+      - atlas
+    environment:
+      - CLICKHOUSE_USER=clickhouse
+      - CLICKHOUSE_PASSWORD=clickhouse
+      - CLICKHOUSE_DB=default
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+    volumes:
+      - clickhouse:/var/lib/clickhouse
+      - ./clickhouse/config.d:/etc/clickhouse-server/config.d
+    restart: always
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--user=clickhouse", "--password=clickhouse", "--query=SELECT 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+  minio:
+    image: minio/minio:latest
+    networks:
+      - atlas
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=minio
+      - MINIO_ROOT_PASSWORD=miniosecret
+    volumes:
+      - minio:/data
+    restart: always
+  minio-init:
+    image: minio/mc:latest
+    networks:
+      - atlas
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+        sleep 5 &&
+        mc alias set local http://minio:9000 minio miniosecret &&
+        mc mb --ignore-existing local/langfuse
+      "
+  langfuse-web:
+    image: langfuse/langfuse:3
+    networks:
+      - atlas
+    depends_on:
+      db:
+        condition: service_started
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+      clickhouse:
+        condition: service_healthy
+    ports:
+      - "3010:3000"
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/langfuse
+      - NEXTAUTH_URL=http://localhost:3010
+      - NEXTAUTH_SECRET=localsecret
+      - SALT=localsalt
+      - ENCRYPTION_KEY=0000000000000000000000000000000000000000000000000000000000000000
+      - TELEMETRY_ENABLED=false
+      - CLICKHOUSE_MIGRATION_URL=clickhouse://clickhouse:9000
+      - CLICKHOUSE_URL=http://clickhouse:8123
+      - CLICKHOUSE_USER=clickhouse
+      - CLICKHOUSE_PASSWORD=clickhouse
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - LANGFUSE_S3_EVENT_UPLOAD_BUCKET=langfuse
+      - LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID=minio
+      - LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY=miniosecret
+      - LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT=http://minio:9000
+      - LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE=true
+      - LANGFUSE_S3_EVENT_UPLOAD_REGION=auto
+      - LANGFUSE_S3_MEDIA_UPLOAD_BUCKET=langfuse
+      - LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID=minio
+      - LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY=miniosecret
+      - LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT=http://minio:9000
+      - LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE=true
+      - LANGFUSE_S3_MEDIA_UPLOAD_REGION=auto
+      - LANGFUSE_INIT_ORG_NAME=Atlas
+      - LANGFUSE_INIT_PROJECT_NAME=atlas
+      - LANGFUSE_INIT_PROJECT_PUBLIC_KEY=pk-lf-atlas-local
+      - LANGFUSE_INIT_PROJECT_SECRET_KEY=sk-lf-atlas-local
+      - LANGFUSE_INIT_USER_EMAIL=admin@atlas.local
+      - LANGFUSE_INIT_USER_NAME=admin
+      - LANGFUSE_INIT_USER_PASSWORD=password
+  langfuse-worker:
+    image: langfuse/langfuse-worker:3
+    networks:
+      - atlas
+    depends_on:
+      db:
+        condition: service_started
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+      clickhouse:
+        condition: service_healthy
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/langfuse
+      - SALT=localsalt
+      - ENCRYPTION_KEY=0000000000000000000000000000000000000000000000000000000000000000
+      - TELEMETRY_ENABLED=false
+      - CLICKHOUSE_MIGRATION_URL=clickhouse://clickhouse:9000
+      - CLICKHOUSE_URL=http://clickhouse:8123
+      - CLICKHOUSE_USER=clickhouse
+      - CLICKHOUSE_PASSWORD=clickhouse
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - LANGFUSE_S3_EVENT_UPLOAD_BUCKET=langfuse
+      - LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID=minio
+      - LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY=miniosecret
+      - LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT=http://minio:9000
+      - LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE=true
+      - LANGFUSE_S3_EVENT_UPLOAD_REGION=auto
+      - LANGFUSE_S3_MEDIA_UPLOAD_BUCKET=langfuse
+      - LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID=minio
+      - LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY=miniosecret
+      - LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT=http://minio:9000
+      - LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE=true
+      - LANGFUSE_S3_MEDIA_UPLOAD_REGION=auto
+
 volumes:
   db:
     driver: local
   nginx:
     driver: local
   certs:
+    driver: local
+  clickhouse:
+    driver: local
+  minio:
     driver: local
 networks:
   atlas:

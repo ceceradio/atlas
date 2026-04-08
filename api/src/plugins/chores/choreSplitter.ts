@@ -37,25 +37,28 @@ ${commonShortnamePrompt}
 Here are some examples of how to split chores:
 
 Input: "I cleaned the kitchen countertops and did the gbr laundry"
-Output: ["cleaned the kitchen countertop(s)", "did the green bathroom laundry"]
+Tool call: ChoreSplitter({ "chores": ["cleaned the kitchen countertop(s)", "did the green bathroom laundry"] })
 
 Input: "I cleaned the spice countertop, microwave countertop, and the sink. I also did the laundry for the pbr."
-Output: ["cleaned the kitchen countertop(s)", "cleaned the kitchen sink", "did the laundry for the pink bathroom"]
+Tool call: ChoreSplitter({ "chores": ["cleaned the kitchen countertop(s)", "cleaned the kitchen sink", "did the laundry for the pink bathroom"] })
 
-Input: I wetswiffed the gbr, 2f hallway, and quick vacc'd the livvy.
-Output: ["wetswiffed the green bathroom", "wetswiffed the second floor hallway", "quick vacuumed the living room"]
+Input: I wetswiffed the gbr, 2f hallway, and quick vacc'd the livvy and the grand staircase.
+Tool call: ChoreSplitter({ "chores": ["wetswiffed the green bathroom", "wetswiffed the second floor hallway", "quick vacuumed the living room", "quick vacuumed the grand staircase"] })
 
 Input: Ordered and put away groceries
-Output: ["ordered groceries", "put away groceries"]
+Tool call: ChoreSplitter({ "chores": ["ordered groceries", "put away groceries"] })
 
 Input: "Loaded, unloaded, and started the dishwasher. put away drying rack. Took out the trash and rebagged the garage cans."
-Output: ["loaded/unloaded the dishwasher", "started the dishwasher", "put away drying rack dishes", "took out the trash", "rebagged the garage cans"]
+Tool call: ChoreSplitter({ "chores": ["loaded/unloaded the dishwasher", "started the dishwasher", "put away drying rack dishes", "took out the trash", "rebagged the garage cans"] })
 
 Input: "replaced air filter and vacuumed the unit"
-Output: ["replaced air filter", "cleaned the air filter"]
+Tool call: ChoreSplitter({ "chores": ["replaced air filter", "vacuumed the unit"] })
 
-Input: "Swept up collected salt, bugs, and dirt from garage floor"
-Output: ["swept garage floor"]
+Input: "Swept up collected salt, bugs, and dirt from garage floor. vacuumed the narrow and grand stairways"
+Tool call: ChoreSplitter({ "chores": ["swept garage floor", "vacuumed the narrow stairway", "vacuumed the grand stairway"] })
+
+Input: "Today: -Cleared a bunch of old food out of the fridge -PBR Trash -Re-bagged Bin"
+Tool call: ChoreSplitter({ "chores": ["cleared old food out of the fridge", "took out the pink bathroom trash", "re-bagged garage bin"] })
 `
   const { chores } = await Atlas.processToolRequest(
     ChoreSplitterTool,

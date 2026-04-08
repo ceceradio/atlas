@@ -1,5 +1,5 @@
 'use client'
-import { AtlasSocketMessage } from '@atlas/api'
+import { AtlasSocketMessage, Snapshot } from '@atlas/api'
 import { useState } from 'react'
 import { ReadyState } from 'react-use-websocket'
 import { useWebSocket } from 'react-use-websocket/dist/lib/use-websocket'
@@ -24,7 +24,7 @@ export default function useAtlasSocket() {
     readyState,
     lastJsonMessage,
   } = useWebSocket(
-    'wss://local.atlasai.zone/ws/',
+    `wss://${process.env.NEXT_PUBLIC_DOMAIN}/ws/`,
     {
       shouldReconnect: (e) => {
         console.info('CloseEvent', e)

@@ -4,7 +4,8 @@ import { Conversation } from '@/entity/Conversation'
 import { AtlasSocketMessage, Update } from '@/ws'
 import Queue from 'bull'
 import { messageOrganizationQueue } from './messageOrganization'
-export const retitleQueue = new Queue<RetitleJobData>('retitle')
+import { redisConfig } from './redis'
+export const retitleQueue = new Queue<RetitleJobData>('retitle', { redis: redisConfig })
 
 type RetitleJobData = {
   uuid: string

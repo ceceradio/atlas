@@ -1,4 +1,5 @@
 import {
+  ChannelType,
   Client,
   Events,
   GatewayIntentBits,
@@ -15,6 +16,7 @@ import { LangfuseTracer } from '@/atlas/ai-compat/langfuse/LangfuseTracer'
 import { AtlasAssistant } from '@/atlas/assistants/Atlas/AtlasAssistant'
 import { AtlasThinkingAssistant } from '@/atlas/assistants/Atlas/AtlasThinkingAssistant'
 import { ShouldAtlasRespond } from '@/atlas/assistants/ShouldRespond/ShouldAtlasRespond'
+import { ThreeCBTAssistant } from '@/atlas/assistants/ThreeCBT/ThreeCBTAssistant'
 import { Conversation } from '@/entity/Conversation'
 import { AtlasPlugin } from '../AtlasPlugin'
 import { convertDiscordMessagesToAtlas } from './convertDiscordMessagesToAtlas'
@@ -39,6 +41,19 @@ export class AtlasDiscord implements AtlasPlugin {
     })
     this.attachEventsToClient()
     this.listeners = []
+  }
+
+  public getTextChannels() {
+    return Array.from(this.client.guilds.cache.values()).flatMap((guild) =>
+      Array.from(guild.channels.cache.values())
+        .filter((c) => c.type === ChannelType.GuildText)
+        .map((c) => ({
+          id: c.id,
+          name: c.name,
+          guildId: guild.id,
+          guildName: guild.name,
+        })),
+    )
   }
 
   public registerListener(
@@ -98,26 +113,25 @@ export class AtlasDiscord implements AtlasPlugin {
 
     this.client.on(
       Events.MessageCreate,
-      async (message) => await this.processMessage(message),
+      async (message) => await this.processMessage(message, ThreeCBTAssistant),
     )
     setInterval(() => {
       ;(async () => {
         const cece = await this.client.users.fetch('254824216682037260')
         const response = await cece.dmChannel?.messages.fetch()
         if (!response) {
-          return console.log('no response')
+          return void 0
         }
 
         const lastMessage = response.first()
         if (lastMessage) {
           await this.processMessage(lastMessage, AtlasThinkingAssistant)
         }
-      })().then(() => console.log('done'))
+      })().then(() => {})
     }, 1000 * 60 * 5)
   }
 
   async processMessage(message: Message<boolean>, assistant?: IAssistant) {
-    console.log('message received')
     if (this.isAtlas(message)) return
     if (!this.isAllowedToRespond(message)) return
 
@@ -147,7 +161,6 @@ export class AtlasDiscord implements AtlasPlugin {
 
       const shouldRespond = await this.shouldRespond(message, 6, tracer)
       if (!shouldRespond) {
-        console.log('should not respond')
         return
       }
 

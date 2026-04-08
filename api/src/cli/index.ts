@@ -19,9 +19,9 @@ if (require.main === module) {
     .then(async (dataSource) => {
       dataSourceHandle = dataSource
       if (command === 'registerUser') {
-        return await registerUser(dataSource, argv.uuid)
+        return await registerUser(dataSource, argv.uuid, argv.name)
       } else if (command === 'registerOrganization') {
-        return await registerOrganization(dataSource)
+        return await registerOrganization(dataSource, argv.name)
       } else if (command === 'listUsers') {
         return await listUsers(dataSource)
       } else if (command === 'retitleConversation') {

@@ -18,9 +18,9 @@ export const RSS_FEEDS = [
     url: 'https://rsshub.app/apnews/topics/ap-top-news',
     pageTarget: '.RichTextStoryBody',
   },
-  */
   {
     url: 'https://www.federalreserve.gov/feeds/speeches.xml',
     pageTarget: '#article',
   },
+  */
 ]

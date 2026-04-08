@@ -1,6 +1,8 @@
 import 'reflect-metadata'
 //
 import { AuthProfile } from '@/entity/AuthProfile'
+import { Chore } from '@/entity/Chore'
+import { ChoreMessage } from '@/entity/ChoreMessage'
 import { Conversation } from '@/entity/Conversation'
 import { Depository } from '@/entity/Depository'
 import { Message } from '@/entity/Message'
@@ -25,6 +27,8 @@ export const postgres = new DataSource({
     User,
     Conversation,
     Message,
+    ChoreMessage,
+    Chore,
   ],
   migrations: ['./migration/*.{js,ts}'],
   subscribers: [],

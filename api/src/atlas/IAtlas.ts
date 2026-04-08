@@ -23,11 +23,14 @@ export type IAtlasCallToolRequest<Args = unknown, ReturnType = unknown> = {
 
 export type IAssistant = {
   name: string
+  temperature?: number
+  maxTokens?: number
   onSystemMessage(
     request: IAtlasAssistantRequest,
     response: IAtlasResponse,
   ): Promise<IAtlasMessage>
   getTools(): ITool[]
+  filterMessages?(messages: IAtlasMessage[]): Promise<IAtlasMessage[]> | IAtlasMessage[]
 }
 
 export type IAtlasUserSpecification = {
@@ -81,7 +84,8 @@ export type IAtlasToolResponseMessage<Content = unknown> = {
   name: string
   content: Content
   time: number
-  role: 'tool_response' // @todo: idk if this is right
+  role: 'tool_response'
+  _validationError?: boolean
 }
 
 export type ITool<
