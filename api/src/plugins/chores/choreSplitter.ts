@@ -27,6 +27,8 @@ export async function choreSplitter(
   const systemMessage = `You are a helpful assistant that reads a list of chores that someone did, and splits them into individual chores in an array.
 The chores need to be split into an array of items that each counts as a single chore.
 For example, if the input is "I cleaned the kitchen and did the laundry", the output should be ["cleaned the kitchen", "did the laundry"].
+Basically, the word "and" should signify that you probably need to split one list item into two or more. However, sometimes "and" is used to connect two parts of a single chore, like "loaded and started the dishwasher". In that case, the output should be ["loaded and started the dishwasher"] — do not split that into two chores.
+Chores like vacuuming, wet swiffed, cleaning, and doing laundry are often performed in multiple rooms in the same day, and those should be split into separate chores for each room. For example, "vacuumed the grand stairway, kitchen, pink bathroom, and 2nd floor hallway" should be split into ["vacuumed the grand stairway", "vacuumed the kitchen", "vacuumed the pink bathroom", "vacuumed the 2nd floor hallway"].
 Chores could be provided in a list format, in a paragraph format, or mixed. Even in a list format, two or more chores could be in a single list item, or a single chore could be split across multiple list items.
 The output should be an array of strings, where each string is a single chore that was done.
 
@@ -36,29 +38,45 @@ ${commonShortnamePrompt}
 
 Here are some examples of how to split chores:
 
-Input: "I cleaned the kitchen countertops and did the gbr laundry"
-Tool call: ChoreSplitter({ "chores": ["cleaned the kitchen countertop(s)", "did the green bathroom laundry"] })
+Input: \`I cleaned the kitchen countertops and did the gbr laundry\`
+Tool call: \`ChoreSplitter({ "chores": ["cleaned the kitchen countertop(s)", "did the green bathroom laundry"] })\`
 
-Input: "I cleaned the spice countertop, microwave countertop, and the sink. I also did the laundry for the pbr."
-Tool call: ChoreSplitter({ "chores": ["cleaned the kitchen countertop(s)", "cleaned the kitchen sink", "did the laundry for the pink bathroom"] })
+Input: \`I cleaned the spice countertop, microwave countertop, and the sink. I also did the laundry for the pbr.\`
+Tool call: \`ChoreSplitter({ "chores": ["cleaned the kitchen countertop(s)", "cleaned the kitchen sink", "did the laundry for the pink bathroom"] })\`
 
-Input: I wetswiffed the gbr, 2f hallway, and quick vacc'd the livvy and the grand staircase.
-Tool call: ChoreSplitter({ "chores": ["wetswiffed the green bathroom", "wetswiffed the second floor hallway", "quick vacuumed the living room", "quick vacuumed the grand staircase"] })
+Input: \`I wetswiffed the gbr, 2f hallway, and quick vacc'd the livvy and the grand staircase.\`
+Tool call: \`ChoreSplitter({ "chores": ["wetswiffed the green bathroom", "wetswiffed the second floor hallway", "quick vacuumed the living room", "quick vacuumed the grand staircase"] })\`
 
-Input: Ordered and put away groceries
-Tool call: ChoreSplitter({ "chores": ["ordered groceries", "put away groceries"] })
+Input: \`cleaned the kitchen counters, and the game room table\`
+Tool call: \`ChoreSplitter({ "chores": ["cleaned the kitchen counters", "cleaned the game room table"] })\`
 
-Input: "Loaded, unloaded, and started the dishwasher. put away drying rack. Took out the trash and rebagged the garage cans."
-Tool call: ChoreSplitter({ "chores": ["loaded/unloaded the dishwasher", "started the dishwasher", "put away drying rack dishes", "took out the trash", "rebagged the garage cans"] })
+Input: \`cleaned the kitchen counters, the game room table, and tidied dining room table\`
+Tool call: \`ChoreSplitter({ "chores": ["cleaned the kitchen counters", "cleaned the game room table", "tidied the dining room table"] })\`
 
-Input: "replaced air filter and vacuumed the unit"
-Tool call: ChoreSplitter({ "chores": ["replaced air filter", "vacuumed the unit"] })
+Input: \`Ordered and put away gronks\`
+Tool call: \`ChoreSplitter({ "chores": ["ordered groceries", "put away groceries"] })\`
 
-Input: "Swept up collected salt, bugs, and dirt from garage floor. vacuumed the narrow and grand stairways"
-Tool call: ChoreSplitter({ "chores": ["swept garage floor", "vacuumed the narrow stairway", "vacuumed the grand stairway"] })
+Input: \`Loaded, unloaded, and started the dishwasher. put away drying rack. did the garage cans.\`
+Tool call: \`ChoreSplitter({ "chores": ["loaded/unloaded the dishwasher", "started the dishwasher", "put away drying rack dishes", "took out the trash", "rebagged the garage cans"] })\`
 
-Input: "Today: -Cleared a bunch of old food out of the fridge -PBR Trash -Re-bagged Bin"
-Tool call: ChoreSplitter({ "chores": ["cleared old food out of the fridge", "took out the pink bathroom trash", "re-bagged garage bin"] })
+Input: \`replaced air filter and vacuumed the unit\`
+Tool call: \`ChoreSplitter({ "chores": ["replaced air filter", "vacuumed the unit"] })\`
+
+Input: \`Swept up collected salt, bugs, and dirt from garage floor. vacuumed the narrow and grand stairways. recycle bin in\`
+Tool call: \`ChoreSplitter({ "chores": ["swept garage floor", "vacuumed the narrow stairway", "vacuumed the grand stairway", "brought the the recycle bin back inside"] })\`
+
+Input: \`Today: -Cleared a bunch of old food out of the fridge -PBR Trash -Re-bagged Bin\`
+Tool call: \`ChoreSplitter({ "chores": ["cleared old food out of the fridge", "took out the pink bathroom trash", "re-bagged garage bin"] })\`
+
+Input: \`Today: - Cooked Dinner - Drying Rack - Hand Washy\`
+Tool call: \`ChoreSplitter({ "chores": ["cooked dinner", "put away drying rack dishes", "hand washed dishes"] })\`
+
+Input: \`Today I:
+• vacuumed the grand stairway, kitchen, pink bathroom, and 2nd floor hallway
+• cleaned the small kitchen table and game room table
+• cleaned the stove vent hood
+• small dishwasher load, unload, and run (nighttime)\`
+Tool call: \`ChoreSplitter({ "chores": ["vacuumed the grand stairway", "vacuumed the kitchen", "vacuumed the pink bathroom", "vacuumed the 2nd floor hallway", "cleaned the small kitchen table", "cleaned the game room table", "cleaned the stove vent hood", "small dishwasher load, unload, and run (nighttime)"] })\`
 `
   const { chores } = await Atlas.processToolRequest(
     ChoreSplitterTool,

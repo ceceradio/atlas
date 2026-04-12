@@ -9,4 +9,5 @@ export const messageOrganizationQueue = new Queue<MessageOrganizationJobData>(
 export type MessageOrganizationJobData = {
   uuid: string
   message: AtlasSocketMessage<unknown>
+  organizationId?: string
 }

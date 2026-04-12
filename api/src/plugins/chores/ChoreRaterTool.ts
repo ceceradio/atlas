@@ -23,9 +23,9 @@ export const ChoreRaterTool: ITool<ChoreRaterToolArgs> = {
             },
             difficulty: {
               type: 'string',
-              enum: ['not a chore', 'small', 'medium', 'large'],
+              enum: ['not a chore', 'small', 'medium', 'large', 'extra large'],
               description:
-                'The difficulty rating of the chore, which can be "not a chore", "small", "medium", or "large".',
+                'The difficulty rating of the chore, which can be "not a chore", "small", "medium", "large", or "extra large".',
             },
           },
           required: ['chore', 'difficulty'],

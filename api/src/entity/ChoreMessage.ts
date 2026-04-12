@@ -36,6 +36,9 @@ export class ChoreMessage {
   @Column({ type: 'timestamp', nullable: true })
   editedAt: Date | null
 
+  @Column({ type: 'jsonb', nullable: true, default: {} })
+  reactions: Record<string, number> | null
+
   @CreateDateColumn({ type: 'timestamp' })
   createdAt: Date
 

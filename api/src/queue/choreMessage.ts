@@ -1,9 +1,11 @@
 import { Chore } from '@/entity/Chore'
 import { ChoreMessage } from '@/entity/ChoreMessage'
+import { ChoreReaction } from '@/entity/ChoreReaction'
 import { getDataSource } from '@/data-source'
 import { LangfuseTracer } from '@/atlas/ai-compat/langfuse/LangfuseTracer'
 import { DatedRatedChores } from '@/plugins/chores/ChoreTypes'
 import { processChoreMessage } from '@/plugins/chores/processChoreMessage'
+import { filterReactions, extractCustomReactionMetadata } from '@/plugins/chores/reactionFilter'
 import { getAtlasPlugins } from '@/plugins'
 import Queue from 'bull'
 import { TextChannel } from 'discord.js'
@@ -13,6 +15,7 @@ import { redisConfig } from './redis'
 export type ChoreMessageJobData = {
   discordMessageId: string
   discordChannelId: string
+  organizationId?: string
 }
 
 export const choreMessageQueue = new Queue<ChoreMessageJobData>(
@@ -35,6 +38,8 @@ choreMessageQueue.process(async (job) => {
   })
 
   const result = await processChoreMessage(content, createdAt.toISOString(), tracer)
+  const reactions = filterReactions(discordMessage.reactions)
+  const reactionMetadata = extractCustomReactionMetadata(discordMessage.reactions)
 
   const db = await getDataSource()
   await db.transaction(async (manager) => {
@@ -50,7 +55,12 @@ choreMessageQueue.process(async (job) => {
 
     if (existing) {
       await choreRepo.delete({ choreMessage: { id: existing.id } })
+      existing.content = content
+      existing.discordAuthorId = author.id
+      existing.discordAuthorName = author.username
+      existing.postedAt = createdAt
       existing.editedAt = editedAt
+      existing.reactions = reactions
       await choreMessageRepo.save(existing)
       await saveChores(choreRepo, existing, result)
     } else {
@@ -62,13 +72,27 @@ choreMessageQueue.process(async (job) => {
         content,
         postedAt: createdAt,
         editedAt,
+        reactions,
       })
       const saved = await choreMessageRepo.save(choreMessage)
       await saveChores(choreRepo, saved, result)
     }
   })
 
-  return result
+  if (reactionMetadata.length > 0) {
+    await db.getRepository(ChoreReaction)
+      .createQueryBuilder()
+      .insert()
+      .into(ChoreReaction)
+      .values(reactionMetadata)
+      .orIgnore()
+      .execute()
+  }
+
+  return {
+    author: { id: author.id, username: author.username },
+    chores: result,
+  }
 })
 
 async function saveChores(

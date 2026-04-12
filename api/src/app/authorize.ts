@@ -14,7 +14,8 @@ const config = {
 
 export const checkJwt = auth(config)
 export const authorize: express.Handler = (request, response, next) => {
-  checkJwt(request, response, () => {
+  checkJwt(request, response, (err?: Error) => {
+    if (err) return next(err)
     const providerId = request.auth?.payload?.sub
     if (!providerId) return response.sendStatus(400)
     AuthProfile.getUser(postgres, AuthProviders.AUTH0, providerId)

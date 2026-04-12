@@ -11,8 +11,6 @@ services:
     depends_on:
       - db
       - redis
-    environment:
-      - TZ=America/New_York
     env_file:
       - .env.next
       - .env.vite

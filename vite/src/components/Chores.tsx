@@ -9,8 +9,8 @@ import {
   ChoreItem,
   ChoreAuthor,
 } from '@/store/atlasApi'
+import { useJobPoller } from '@/helpers/useJobPoller'
 import {
-  Badge,
   Box,
   Button,
   Divider,
@@ -23,31 +23,17 @@ import {
   VStack,
 } from '@chakra-ui/react'
 import { useEffect, useState } from 'react'
+import { ChoreRow, ChoreEditRow, EditForm } from './ChoreRowShared'
+import { useChoreDateRange } from '@/helpers/useChoreDateRange'
 
 const LIMIT = 20
-
-const DIFFICULTY_OPTIONS = ['small', 'medium', 'large', 'not a chore']
-
-const difficultyColor: Record<string, string> = {
-  small: 'green',
-  medium: 'yellow',
-  large: 'red',
-  'not a chore': 'gray',
-}
-
-type EditForm = {
-  description: string
-  doneAt: string
-  difficulty: string
-}
 
 export function ChoresPanel() {
   const [page, setPage] = useState(1)
   const [authorId, setAuthorId] = useState('')
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
+  const [from, setFrom, to, setTo] = useChoreDateRange()
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [rescanningMessageId, setRescanningMessageId] = useState<string | null>(null)
+  const jobPoller = useJobPoller()
   const [editForm, setEditForm] = useState<EditForm>({
     description: '',
     doneAt: '',
@@ -101,12 +87,8 @@ export function ChoresPanel() {
   }
 
   async function handleRescan(choreMessageId: string) {
-    setRescanningMessageId(choreMessageId)
-    try {
-      await reprocessChoreMessage(choreMessageId).unwrap()
-    } finally {
-      setRescanningMessageId(null)
-    }
+    const result = await reprocessChoreMessage(choreMessageId).unwrap()
+    jobPoller.start(choreMessageId, result.jobId)
   }
 
   async function saveEdit(id: string) {
@@ -123,68 +105,70 @@ export function ChoresPanel() {
 
   return (
     <VStack padding="1.5rem" alignItems="stretch" gap="1rem">
-      <Text fontSize="xl" fontWeight="bold">Chores</Text>
+      <Box background="white" borderRadius="lg" boxShadow="sm" padding="1.25rem">
+        <Text fontSize="xl" fontWeight="bold" marginBottom="0.75rem">Chores</Text>
 
-      {/* Channel settings */}
-      <Box>
-        <Text fontSize="sm" fontWeight="semibold" mb="0.5rem" color="gray.600">
-          Discord channel
-        </Text>
-        <HStack>
+        {/* Channel settings */}
+        <Box marginBottom="0.75rem">
+          <Text fontSize="sm" fontWeight="semibold" mb="0.5rem" color="gray.600">
+            Discord channel
+          </Text>
+          <HStack>
+            <Select
+              value={choresChannelId}
+              onChange={(e) => setChoresChannelId(e.target.value)}
+              placeholder="Select a channel..."
+              flex="1"
+            >
+              {discordChannels.map((c) => (
+                <option key={c.id} value={c.id}>
+                  #{c.name} — {c.guildName}
+                </option>
+              ))}
+            </Select>
+            <Button
+              size="sm"
+              colorScheme="blue"
+              isLoading={savingChannel}
+              onClick={() => saveChoresChannel(choresChannelId)}
+            >
+              Save
+            </Button>
+          </HStack>
+        </Box>
+
+        <Divider marginBottom="0.75rem" />
+
+        {/* Filters */}
+        <HStack gap="0.5rem" flexWrap="wrap">
           <Select
-            value={choresChannelId}
-            onChange={(e) => setChoresChannelId(e.target.value)}
-            placeholder="Select a channel..."
-            flex="1"
+            placeholder="All people"
+            value={authorId}
+            onChange={handleFilterChange(setAuthorId)}
+            width="200px"
           >
-            {discordChannels.map((c) => (
-              <option key={c.id} value={c.id}>
-                #{c.name} — {c.guildName}
+            {(authors as ChoreAuthor[]).map((a) => (
+              <option key={a.discordAuthorId} value={a.discordAuthorId}>
+                {a.discordAuthorName}
               </option>
             ))}
           </Select>
-          <Button
-            size="sm"
-            colorScheme="blue"
-            isLoading={savingChannel}
-            onClick={() => saveChoresChannel(choresChannelId)}
-          >
-            Save
-          </Button>
+          <Input
+            type="date"
+            value={from}
+            onChange={handleFilterChange(setFrom)}
+            width="160px"
+            placeholder="From"
+          />
+          <Input
+            type="date"
+            value={to}
+            onChange={handleFilterChange(setTo)}
+            width="160px"
+            placeholder="To"
+          />
         </HStack>
       </Box>
-
-      <Divider />
-
-      {/* Filters */}
-      <HStack gap="0.5rem" flexWrap="wrap">
-        <Select
-          placeholder="All people"
-          value={authorId}
-          onChange={handleFilterChange(setAuthorId)}
-          width="200px"
-        >
-          {(authors as ChoreAuthor[]).map((a) => (
-            <option key={a.discordAuthorId} value={a.discordAuthorId}>
-              {a.discordAuthorName}
-            </option>
-          ))}
-        </Select>
-        <Input
-          type="date"
-          value={from}
-          onChange={handleFilterChange(setFrom)}
-          width="160px"
-          placeholder="From"
-        />
-        <Input
-          type="date"
-          value={to}
-          onChange={handleFilterChange(setTo)}
-          width="160px"
-          placeholder="To"
-        />
-      </HStack>
 
       {/* List */}
       {loading ? (
@@ -210,7 +194,7 @@ export function ChoresPanel() {
                 chore={chore}
                 onEdit={() => startEdit(chore)}
                 onRescan={() => handleRescan(chore.choreMessage.id)}
-                isRescanning={rescanningMessageId === chore.choreMessage.id}
+                isRescanning={jobPoller.isRunning(chore.choreMessage.id)}
               />
             ),
           )}
@@ -243,107 +227,3 @@ export function ChoresPanel() {
   )
 }
 
-function ChoreRow({
-  chore,
-  onEdit,
-  onRescan,
-  isRescanning,
-}: {
-  chore: ChoreItem
-  onEdit: () => void
-  onRescan: () => void
-  isRescanning: boolean
-}) {
-  const edited =
-    chore.description !== chore.aiOriginal.description ||
-    chore.doneAt !== chore.aiOriginal.doneAt ||
-    chore.difficulty !== chore.aiOriginal.difficulty
-
-  return (
-    <Flex
-      padding="0.75rem 1rem"
-      background="gray.50"
-      borderRadius="md"
-      alignItems="center"
-      gap="1rem"
-      flexWrap="wrap"
-    >
-      <Badge colorScheme={difficultyColor[chore.difficulty] ?? 'purple'} minWidth="80px" textAlign="center">
-        {chore.difficulty}
-      </Badge>
-      <Text fontSize="sm" color="gray.500" minWidth="90px">
-        {chore.doneAt}
-      </Text>
-      <Text flex="1">{chore.description}</Text>
-      <Text fontSize="sm" color="gray.400">
-        {chore.choreMessage.discordAuthorName}
-      </Text>
-      {edited && (
-        <Badge colorScheme="blue" variant="outline" fontSize="xs">
-          edited
-        </Badge>
-      )}
-      <Button size="xs" variant="ghost" onClick={onEdit} isDisabled={isRescanning}>
-        Edit
-      </Button>
-      <Button size="xs" variant="ghost" colorScheme="orange" onClick={onRescan} isLoading={isRescanning}>
-        Rescan
-      </Button>
-    </Flex>
-  )
-}
-
-function ChoreEditRow({
-  form,
-  onChange,
-  onSave,
-  onCancel,
-}: {
-  form: EditForm
-  onChange: (f: EditForm) => void
-  onSave: () => void
-  onCancel: () => void
-}) {
-  return (
-    <Flex
-      padding="0.75rem 1rem"
-      background="blue.50"
-      borderRadius="md"
-      alignItems="center"
-      gap="0.5rem"
-      flexWrap="wrap"
-    >
-      <Select
-        value={form.difficulty}
-        onChange={(e) => onChange({ ...form, difficulty: e.target.value })}
-        width="150px"
-        size="sm"
-      >
-        {DIFFICULTY_OPTIONS.map((d) => (
-          <option key={d} value={d}>
-            {d}
-          </option>
-        ))}
-      </Select>
-      <Input
-        type="date"
-        value={form.doneAt}
-        onChange={(e) => onChange({ ...form, doneAt: e.target.value })}
-        width="160px"
-        size="sm"
-      />
-      <Input
-        value={form.description}
-        onChange={(e) => onChange({ ...form, description: e.target.value })}
-        flex="1"
-        size="sm"
-      />
-      <Button size="sm" colorScheme="blue" onClick={onSave}>
-        Save
-      </Button>
-      <Button size="sm" variant="ghost" onClick={onCancel}>
-        Cancel
-      </Button>
-    </Flex>
-  )
-}

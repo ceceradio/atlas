@@ -5,6 +5,7 @@ import { PropsWithChildren } from 'react'
 import { Provider } from 'react-redux'
 import { store } from '@/store'
 import { AccessTokenManager } from './AccessTokenManager'
+import { JobQueueMonitor } from './JobQueueMonitor'
 
 export function Providers({ children }: PropsWithChildren) {
   const navigate = useNavigate()
@@ -31,6 +32,7 @@ export function Providers({ children }: PropsWithChildren) {
         }}
       >
         <AccessTokenManager />
+        <JobQueueMonitor />
         <ChakraProvider>{children}</ChakraProvider>
       </Auth0Provider>
     </Provider>

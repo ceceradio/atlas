@@ -2,11 +2,5 @@ services:
   atlas:
     volumes:
       - .:/usr/src/app/
-      - /usr/src/app/node_modules
-      - /usr/src/app/api/node_modules
-      - /usr/src/app/next/node_modules
-      - /usr/src/app/next/.next
-      - /usr/src/app/vite/node_modules
     environment:
       - WATCHPACK_POLLING=true
-      - TZ=America/New_York

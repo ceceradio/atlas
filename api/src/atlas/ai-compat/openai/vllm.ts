@@ -34,7 +34,36 @@ const ai = new OpenAI({
   baseURL: `http://${VLLM_HOST}:8000/v1/`,
 })
 const TEMPERATURE = 0.7
-const MODEL_ID = 'qwen/Qwen3.5-4B'
+
+let modelId: string | null = null
+
+async function fetchCurrentModel(): Promise<string | null> {
+  try {
+    const res = await fetch(`http://${VLLM_HOST}:8000/v1/models`)
+    if (!res.ok) return null
+    const data = await res.json() as { data: { id: string }[] }
+    return data.data[0]?.id ?? null
+  } catch {
+    return null
+  }
+}
+
+async function getModelId(): Promise<string> {
+  if (modelId) return modelId
+  const id = await fetchCurrentModel()
+  if (id) modelId = id
+  return modelId ?? 'unknown'
+}
+
+// Resolve model on startup
+fetchCurrentModel().then((id) => {
+  if (id) {
+    modelId = id
+    console.log(`[vllm] model: ${modelId}`)
+  } else {
+    console.warn('[vllm] could not resolve model on startup')
+  }
+})
 
 const CONTEXT_CACHE_KEY = 'vllm:max_model_len'
 const TOKEN_CACHE_PREFIX = 'vllm:tokens:'
@@ -55,7 +84,7 @@ async function tokenize(text: string): Promise<number> {
   const res = await fetch(`http://${VLLM_HOST}:8000/tokenize`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: MODEL_ID, prompt: text }),
+    body: JSON.stringify({ model: await getModelId(), prompt: text }),
   })
   const data = (await res.json()) as TokenizeResponse
 
@@ -221,6 +250,103 @@ function mapTool<A>(tool: ITool<A>): ChatCompletionTool {
   return oaiTool
 }
 
+async function doGetAIResponse(
+  model: string,
+  userId: string,
+  assistant: IAssistant,
+  messages: IAtlasMessage[],
+  tools: ITool[],
+  transceiver?: (message: IAtlasEvent) => void,
+  selectedToolName?: string,
+  tracer?: ITracer,
+  maxTokens?: number,
+): Promise<IAtlasMessage[]> {
+  const rawMessages = messages.map(VllmCompatibility.mapToOpenAI)
+  const compatibleTools = tools.map((tool) => mapTool(tool))
+  const maxInputTokens = await getMaxInputTokens()
+  const compatibleMessages = await trimToContextLimit(
+    rawMessages,
+    compatibleTools,
+    maxInputTokens,
+  )
+
+  if (selectedToolName) {
+    const systemMessage = compatibleMessages.find((m) => m.role === 'system')
+    const directive = `\n\nYou MUST respond by calling the following tool and nothing else: ${selectedToolName}. Do not write any explanatory text — only call the tool.`
+    if (systemMessage) {
+      systemMessage.content = (systemMessage.content as string) + directive
+    } else {
+      compatibleMessages.unshift({
+        role: 'system',
+        content: directive.trim(),
+      })
+    }
+  }
+
+  const selectedTool: ChatCompletionToolChoiceOption | undefined =
+    selectedToolName
+      ? { type: 'function', function: { name: selectedToolName } }
+      : undefined
+
+  const responseFormat = selectedToolName
+    ? { type: 'json_object' }
+    : undefined
+
+  const startTime = new Date()
+
+  const stream = ai.beta.chat.completions.stream({
+    messages: compatibleMessages,
+    model,
+    tools: compatibleTools.length ? compatibleTools : undefined,
+    user: userId,
+    temperature: 0.7,
+    top_p: 0.8,
+    presence_penalty: 2,
+    max_tokens: maxTokens,
+    stream: true,
+    stream_options: { include_usage: true },
+    tool_choice: selectedTool,
+    response_format: responseFormat,
+
+    top_k: 20,
+    repetition_penalty: 1.05,
+    min_p: 0,
+  })
+  if (transceiver) {
+    stream.on('content', (_delta, snapshot) =>
+      transceiver({ type: 'snapshot', snapshot }),
+    )
+  }
+
+  await stream.finalChatCompletion()
+  const allCompletions = stream.allChatCompletions()
+  const endTime = new Date()
+
+  for (const chatCompletion of allCompletions) {
+    tracer?.trace(
+      compatibleMessages,
+      model,
+      'getAIResponse',
+      {
+        skipTraceUpdate: true,
+        tools: compatibleTools.map((tool) => tool.function.name),
+        toolChoice: selectedToolName,
+      },
+      [startTime, endTime],
+      chatCompletion,
+    )
+  }
+
+  return allCompletions
+    .map((chatCompletion) =>
+      VllmCompatibility.unmapResponseToAtlas(
+        chatCompletion.choices[0].message,
+        assistant,
+      ),
+    )
+    .flat()
+}
+
 export const VllmCompatibility = {
   mapToOpenAI(message: IAtlasMessage): ChatCompletionMessageParam {
     if (message.role === 'user') return mapUserMessage(message)
@@ -248,84 +374,18 @@ export const VllmCompatibility = {
     temperature?: number,
     maxTokens?: number,
   ): Promise<IAtlasMessage[]> => {
-    const rawMessages = messages.map(VllmCompatibility.mapToOpenAI)
-    const compatibleTools = tools.map((tool) => mapTool(tool))
-    const maxInputTokens = await getMaxInputTokens()
-    const compatibleMessages = await trimToContextLimit(
-      rawMessages,
-      compatibleTools,
-      maxInputTokens,
-    )
-
-    if (selectedToolName) {
-      const systemMessage = compatibleMessages.find((m) => m.role === 'system')
-      const directive = `\n\nYou MUST respond by calling the following tool and nothing else: ${selectedToolName}. Do not write any explanatory text — only call the tool.`
-      if (systemMessage) {
-        systemMessage.content = (systemMessage.content as string) + directive
-      } else {
-        compatibleMessages.unshift({
-          role: 'system',
-          content: directive.trim(),
-        })
+    const model = await getModelId()
+    try {
+      return await doGetAIResponse(model, userId, assistant, messages, tools, transceiver, selectedToolName, tracer, maxTokens)
+    } catch (err) {
+      const newModel = await fetchCurrentModel()
+      if (newModel && newModel !== model) {
+        modelId = newModel
+        await redis.del(CONTEXT_CACHE_KEY)
+        console.log(`[vllm] model changed ${model} → ${newModel}, retrying`)
+        return doGetAIResponse(newModel, userId, assistant, messages, tools, transceiver, selectedToolName, tracer, maxTokens)
       }
+      throw err
     }
-
-    const selectedTool: ChatCompletionToolChoiceOption | undefined =
-      selectedToolName ? 'required' : undefined
-
-    const startTime = new Date()
-
-    const stream = ai.beta.chat.completions.stream({
-      messages: compatibleMessages,
-      model: MODEL_ID,
-      tools: compatibleTools.length ? compatibleTools : undefined,
-      user: userId,
-      temperature: 0.7,
-      top_p: 0.8,
-      presence_penalty: 2,
-      max_tokens: maxTokens,
-      stream: true,
-      stream_options: { include_usage: true },
-      tool_choice: selectedTool,
-
-      top_k: 20,
-      repetition_penalty: 1.05,
-      min_p: 0,
-    })
-    if (transceiver) {
-      stream.on('content', (_delta, snapshot) =>
-        transceiver({ type: 'snapshot', snapshot }),
-      )
-    }
-
-    await stream.finalChatCompletion()
-    const allCompletions = stream.allChatCompletions()
-    const endTime = new Date()
-
-    for (const chatCompletion of allCompletions) {
-      tracer?.trace(
-        compatibleMessages,
-        MODEL_ID,
-        'getAIResponse',
-        {
-          skipTraceUpdate: true,
-          tools: compatibleTools.map((tool) => tool.function.name),
-          toolChoice: selectedToolName,
-        },
-        [startTime, endTime],
-        chatCompletion,
-      )
-    }
-
-    const response = allCompletions
-      .map((chatCompletion) =>
-        VllmCompatibility.unmapResponseToAtlas(
-          chatCompletion.choices[0].message,
-          assistant,
-        ),
-      )
-      .flat()
-
-    return response
   },
 }

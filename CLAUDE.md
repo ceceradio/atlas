@@ -1,6 +1,6 @@
 # Atlas Communesoft
 
-AI-powered multi-user conversational platform. Monorepo with an Express/TypeScript backend (`api/`), a Next.js 13 frontend (`next/`), NGINX reverse proxy, PostgreSQL, and Redis — all orchestrated via Docker Compose.
+AI-powered multi-user conversational platform. Monorepo with an Express/TypeScript backend (`api/`), a Vite/React frontend (`vite/`), NGINX reverse proxy, PostgreSQL, Redis, and Langfuse — all orchestrated via Docker Compose.
 
 ---
 
@@ -9,13 +9,13 @@ AI-powered multi-user conversational platform. Monorepo with an Express/TypeScri
 ```
 atlas-communesoft/
 ├── api/          # Express REST + WebSocket server (port 3001/3002)
-├── next/         # Next.js 13 App Router frontend (port 3000)
-├── nginx/        # NGINX reverse proxy (HTTP 880 → HTTPS 8443)
-├── Dockerfile    # Single image, runs both api + next
+├── vite/         # Vite + React frontend (port 3004)
+├── nginx/        # NGINX reverse proxy (HTTPS 8443)
+├── Dockerfile    # Single image, runs both api + vite
 └── docker-compose.yml
 ```
 
-Shared TypeScript interfaces live in `api/src/interface/` and are imported by the frontend via the `@atlas/api` path alias defined in `next/tsconfig.json`.
+Shared TypeScript interfaces live in `api/src/interface/` and are imported by the frontend via the `@atlas/api` path alias (defined in `vite/package.json` as `"@atlas/api": "file:../api"`).
 
 ---
 
@@ -27,8 +27,8 @@ Run from the **project root** unless noted.
 |---|---|
 | `npm run docker` | Start full dev stack (all containers) |
 | `npm run docker-reset` | Tear down containers + volumes |
-| `npm run docker-setup` | Generate SSL cert + update `/etc/hosts` |
-| `npm run start-node` | Run api + next locally without Docker |
+| `npm run docker-setup` | Generate SSL cert |
+| `npm run start-node` | Run api + vite locally without Docker |
 | `npm run test` | Run all tests |
 | `npm run make-migration` | Generate TypeORM migration from entity changes |
 | `npm run repl` | Start interactive REPL with API context loaded |
@@ -41,12 +41,11 @@ npm test           # Jest (*.spec.ts)
 npm run repl       # ts-node REPL with env + TypeORM
 ```
 
-**Next.js only** (`cd next`):
+**Vite only** (`cd vite`):
 
 ```bash
-npm run dev        # hot reload dev server
+npm run dev        # hot reload dev server (port 3004)
 npm run build      # production build
-npm run lint       # ESLint
 ```
 
 ---
@@ -54,7 +53,7 @@ npm run lint       # ESLint
 ## Environment Files
 
 - `.env.api` — API secrets (DB credentials, Auth0, OpenAI key, Discord token)
-- `.env.next` — Frontend Auth0 config (public, safe to commit template)
+- `.env.vite` — Frontend Auth0 config (`VITE_AUTH0_DOMAIN`, `VITE_AUTH0_CLIENTID`, `VITE_AUTH0_REDIRECT_URI`, `VITE_AUTH0_AUDIENCE`)
 - Templates: `.env.api.template`, `.env.next.template`
 
 Set `LOCAL=true` in `.env.api` to switch the AI backend from OpenAI to a local-compatible endpoint.
@@ -159,22 +158,26 @@ Built-in assistants live in `api/src/atlas/assistants/`:
 
 AI backend is swappable: `OpenAICompatibility` (default) vs `LocalCompatibility` (set `LOCAL=true`). Observability via Langfuse (`ITracer`).
 
-### Frontend (`next/`)
+### Frontend (`vite/`)
 
-- **Framework**: Next.js 13 App Router
+- **Framework**: Vite + React 18 (replaced Next.js 13)
+- **Routing**: `react-router-dom` v6; pages under `vite/src/app/pages/`; conversation detail at `/zone/conversation/:uuid`
 - **UI**: Chakra UI + Framer Motion
-- **Auth**: `@auth0/auth0-react` wrapped in `next/src/helpers/Providers.tsx`
+- **Auth**: `@auth0/auth0-react` wrapped in `vite/src/helpers/Providers.tsx`; env vars prefixed `VITE_AUTH0_*`
+- **State**: Redux Toolkit + RTK Query (`vite/src/store/atlasApi.ts`) for all API calls
 - **Real-time**: `react-use-websocket` connects to the API WebSocket
-- **Path aliases**: `@/` → `next/src/`, `@atlas/api` → `../api/src`
-- Pages are under `next/src/app/`; conversation detail is at `zone/conversation/[uuid]/page.tsx`
+- **Path alias**: `@/` → `vite/src/`, `@atlas/api` → `../api`
+- **Dates**: All timestamps stored as UTC; rendered in `America/New_York` (Eastern) using `toLocaleDateString`/`toLocaleString` with `{ timeZone: 'America/New_York' }`
 
 ### NGINX Routing
 
 | Path | Upstream |
 |---|---|
-| `/ws/*` | API WebSocket (`localhost:3002`) |
-| `/api/*` | API REST (`localhost:3001`) |
-| `/` | Next.js (`localhost:3000`) |
+| `/ws/*` | API WebSocket (`atlas:3002`) |
+| `/api/*` | API REST (`atlas:3001`) |
+| `/` | Vite (`atlas:3004`) |
+
+Server name: `chocolate.local` (resolves via mDNS, no hosts entry needed).
 
 ---
 
@@ -194,5 +197,4 @@ AI backend is swappable: `OpenAICompatibility` (default) vs `LocalCompatibility`
 
 After `npm run docker-setup` + `npm run docker`:
 
-- <https://local.atlasai.zone:8443>
-- <http://local.atlasai.zone:880> (redirects to HTTPS)
+- <https://chocolate.local:8443>

@@ -13,4 +13,5 @@ export type IConversation = {
 }
 export type IAPIConversation = Omit<IConversation, 'messages'> & {
   messages: IAtlasMessage[]
+  lastMessageAt?: Date | null
 }

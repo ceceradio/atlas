@@ -4,6 +4,7 @@ import { IAtlasAssistantMessage } from '@/atlas/IAtlas'
 import { AtlasAssistant } from '@/atlas/assistants/Atlas/AtlasAssistant'
 import { getDataSource, postgres } from '@/data-source'
 import { Conversation } from '@/entity/Conversation'
+import { Equal } from 'typeorm'
 import { Message } from '@/entity/Message'
 import { User } from '@/entity/User'
 import { IAPIConversation } from '@/interface/Conversation'
@@ -34,6 +35,23 @@ conversationApp.get('/conversation/:uuid', async (request, response) => {
   return response.json(conversation.toApi())
 })
 
+conversationApp.delete('/conversation/:uuid', async (request, response) => {
+  const { uuid } = request.params
+  const { user } = response.locals
+  const db = await getDataSource()
+  const conversation = await db.getRepository(Conversation).findOne({
+    where: { uuid, organization: Equal(user.organization.uuid) },
+  })
+  if (!conversation) return response.sendStatus(404)
+  await db.getRepository(Conversation).softDelete(uuid)
+  routeToOrganization(user.organization.uuid, {
+    type: 'update',
+    entity: 'conversation',
+    uuid,
+  })
+  return response.sendStatus(204)
+})
+
 type ConversationPatchBody = { content: string }
 conversationApp.patch('/conversation/:uuid', async (request, response) => {
   const { content }: ConversationPatchBody = await request.body
@@ -53,36 +71,19 @@ conversationApp.patch('/conversation/:uuid', async (request, response) => {
     user.organization.uuid,
   )
   // add background job
-  retitleQueue.add({ uuid: conversation.uuid }, { delay: 1000 })
+  retitleQueue.add({ uuid: conversation.uuid, organizationId: user.organization.uuid }, { delay: 1000 })
   return response.json(data)
 })
 
-type ConversationPostBody = { content: string }
 conversationApp.post('/conversation', async (request, response) => {
-  const { content }: ConversationPostBody = await request.body
   const { user } = response.locals
-  if (!content) return response.sendStatus(400)
   if (!user) return response.sendStatus(401)
   const db = await getDataSource()
-  // create a conversation and add the opening message to it
-  const conversation = await Conversation.create(db, user)
-  await openConversation(user, conversation)
-
-  const data = await performChatExchange(
-    content,
-    user,
-    conversation,
-    user.organization.uuid,
-  )
-  // add background job
-  retitleQueue.add({ uuid: conversation.uuid }, { delay: 1000 })
-
-  return response.json(data)
+  const created = await Conversation.create(db, user)
+  const conversation = await Conversation.get(db, created.uuid)
+  return response.json(conversation!.toApi())
 })
 
-async function openConversation(user: User, conversation: Conversation) {
-  return performChatExchange('', user, conversation)
-}
 
 async function performChatExchange(
   content: string,

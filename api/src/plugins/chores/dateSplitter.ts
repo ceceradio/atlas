@@ -4,7 +4,7 @@ import { dateSubtract } from '@/lib/dateAdd'
 import { DatedChoresRaw } from './ChoreTypes'
 import { DateSplitterTool } from './DateSplitterTool'
 
-const TZ = process.env.TZ ?? 'America/New_York'
+const TZ = 'America/New_York'
 
 function toYMD(date: Date): string {
   return new Intl.DateTimeFormat('en-CA', {
@@ -15,14 +15,9 @@ function toYMD(date: Date): string {
   }).format(date)
 }
 
-function getLocalHour(date: Date): number {
-  return parseInt(
-    new Intl.DateTimeFormat('en-US', {
-      timeZone: TZ,
-      hour: 'numeric',
-      hour12: false,
-    }).format(date),
-  )
+function getEasternHour(date: Date): number {
+  const hour = parseInt(new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: 'numeric', hourCycle: 'h23' }).format(date))
+  return hour === 24 ? 0 : hour
 }
 
 export async function dateSplitter(
@@ -32,83 +27,147 @@ export async function dateSplitter(
 ): Promise<DatedChoresRaw[]> {
   console.log(messageDate)
   const sentAt = new Date(messageDate)
-  const isEarlyMorning = getLocalHour(sentAt) < 4
+  const isEarlyMorning = getEasternHour(sentAt) < 4
   const today = isEarlyMorning ? dateSubtract(sentAt, 1, 'day') : sentAt
   const yesterday = dateSubtract(today, 1, 'day')
-  const systemMessage = `You are a helpful assistant that reads a message describing chores that were done, and splits the message up into which day the chores were performed on.
+  const sentAtStr = sentAt.toLocaleString('en-US', { timeZone: TZ, dateStyle: 'full', timeStyle: 'long' })
+  const systemMessage = `\
+You are a helpful assistant that reads a message describing chores and splits it into groups by the day each chore was performed.
 
-The message will frequently be only about chores that were done in the past, but may also include chores that will be done in the future.
-The output should be an array where the message has been split into parts that each correspond to a single day.
+## Rules
 
-Generally speaking most people go to sleep before midnight, but sometimes there are some very late night chores done.
-Chores done after midnight but before 4am should be considered as being done the previous day, since they are likely being done by someone who has not yet gone to sleep.
+- The output is an array of splits, one per day mentioned.
+- Messages often describe chores done in the past; occasionally they include future intentions — include those too, assigned to the correct date.
+- Messages are sent in the Eastern timezone. Times after midnight but before 4am are treated as belonging to the previous calendar day (the sender has not yet gone to sleep).
+- Use the original wording from the message in each split — do not paraphrase or summarize.
+- If the message contains no temporal references at all, assign everything to today (\`${toYMD(today)}\`).
+
+## Context
+
+Message sent: \`${sentAtStr}\`${isEarlyMorning ? ' *(early morning — treated as the previous calendar day)*' : ''}
+- "today" = \`${toYMD(today)}\`
+- "yesterday" = \`${toYMD(yesterday)}\`
 
 ## Examples
 
-Date Input: 2026-03-21 7:02:38 PM EST
-Text Input: "I cleaned the kitchen yesterday and will do the laundry today"
-Tool call: DateSplitter({ "splits": [
+---
+
+Date: \`Saturday, March 21, 2026 at 7:02:38 PM EDT\`
+Input: \`"I cleaned the kitchen yesterday and will do the laundry today"\`
+Output:
+\`\`\`json
+[
   { "date": "2026-03-20", "message": "I cleaned the kitchen yesterday" },
   { "date": "2026-03-21", "message": "will do the laundry today" }
-]})
+]
+\`\`\`
 
-Date Input: 2026-02-01 12:02:38 AM EST
-Text Input: "I did handwashed pots and pans from dinner, and cleaned the countertops and stovetop late at night."
-Tool call: DateSplitter({ "splits": [
+---
+
+Date: \`Sunday, February 1, 2026 at 12:02:38 AM EST\` *(early morning — treated as the previous calendar day)*
+- "today" = \`2026-01-31\`, "yesterday" = \`2026-01-30\`
+Input: \`"I did handwashed pots and pans from dinner, and cleaned the countertops and stovetop late at night."\`
+Output:
+\`\`\`json
+[
   { "date": "2026-01-31", "message": "I did handwashed pots and pans from dinner, and cleaned the countertops and stovetop late at night." }
-]})
+]
+\`\`\`
 
-Date Input: 2026-01-03 09:02:38 AM EST
-Text Input: "I cleaned the bathroom sink and toilet yesterday, and will clean the kitchen sink later today."
-Tool call: DateSplitter({ "splits": [
+---
+
+Date: \`Saturday, March 28, 2026 at 1:15:00 AM EDT\` *(early morning — treated as the previous calendar day)*
+- "today" = \`2026-03-27\`, "yesterday" = \`2026-03-26\`
+Input: \`"today I cooked dinner and did the dishes, yesterday I vacuumed the living room"\`
+Output:
+\`\`\`json
+[
+  { "date": "2026-03-26", "message": "yesterday I vacuumed the living room" },
+  { "date": "2026-03-27", "message": "today I cooked dinner and did the dishes" }
+]
+\`\`\`
+
+---
+
+Date: \`Saturday, January 3, 2026 at 9:02:38 AM EST\`
+Input: \`"I cleaned the bathroom sink and toilet yesterday, and will clean the kitchen sink later today."\`
+Output:
+\`\`\`json
+[
   { "date": "2026-01-02", "message": "I cleaned the bathroom sink and toilet yesterday" },
   { "date": "2026-01-03", "message": "will clean the kitchen sink later today" }
-]})
+]
+\`\`\`
 
-Date Input: 2026-03-03 09:02:38 PM EST
-Text Input: "yesterday:
+---
+
+Date: \`Tuesday, March 3, 2026 at 9:02:38 PM EST\`
+Input:
+\`\`\`
+yesterday:
 - cooked dinner for 3/5 (also cleaned up afterwards, put leftovers in fridge)
 - took trash out to curb
 
 today i:
 
 - cleaned the bathroom sink and toilet
-- will clean the kitchen sink later today"
-Tool call: DateSplitter({ "splits": [
+- will clean the kitchen sink later today
+\`\`\`
+Output:
+\`\`\`json
+[
   { "date": "2026-03-02", "message": "yesterday:\n- cooked dinner for 3/5 (also cleaned up afterwards, put leftovers in fridge)\n- took trash out to curb" },
   { "date": "2026-03-03", "message": "today i:\n\n- cleaned the bathroom sink and toilet\n- will clean the kitchen sink later today" }
-]})
+]
+\`\`\`
 
-Date Input: 2026-05-19 09:02:38 PM EST
-Text Input: "today i:
+---
+
+Date: \`Tuesday, May 19, 2026 at 9:02:38 PM EDT\`
+Input:
+\`\`\`
+today i:
 - cooked dinner for 3/5 (also cleaned up afterwards, put leftovers in fridge)
 - took trash out to curb
 - cleaned the bathroom sink and toilet
-- will clean the kitchen sink later today"
-Tool call: DateSplitter({ "splits": [
+- will clean the kitchen sink later today
+\`\`\`
+Output:
+\`\`\`json
+[
   { "date": "2026-05-19", "message": "today i:\n- cooked dinner for 3/5 (also cleaned up afterwards, put leftovers in fridge)\n- took trash out to curb\n- cleaned the bathroom sink and toilet\n- will clean the kitchen sink later today" }
-]})
+]
+\`\`\`
 
-Date Input: 2026-05-19 10:30:00 PM EST
-Text Input: "Today:
+---
+
+Date: \`Tuesday, May 19, 2026 at 10:30:00 PM EDT\`
+Input:
+\`\`\`
+Today:
 Cleared a bunch of old food out of the fridge
 PBR Trash
-Re-bagged Bin"
-Tool call: DateSplitter({ "splits": [
+Re-bagged Bin
+\`\`\`
+Output:
+\`\`\`json
+[
   { "date": "2026-05-19", "message": "Today:\n- Cleared a bunch of old food out of the fridge\n- PBR Trash\n- Re-bagged Bin" }
-]})
+]
+\`\`\`
 
-The date the message was sent is ${sentAt.toLocaleString('en-US', {
-    timeZone: TZ,
-  })}${
-    isEarlyMorning
-      ? ` (early morning — treated as the previous calendar day for chore purposes)`
-      : ''
-  }. Therefore "today" would mean ${toYMD(
-    today,
-  )}, "yesterday" would mean ${toYMD(yesterday)}
+---
 
-Call the tool exactly one time.
+Date: \`Thursday, April 10, 2026 at 3:15:00 PM EDT\`
+Input: \`"vacuumed the living room and took out the trash"\`
+Output:
+\`\`\`json
+[
+  { "date": "2026-04-10", "message": "vacuumed the living room and took out the trash" }
+]
+\`\`\`
+
+Call the tool exactly once.
 `
   const response = await Atlas.processToolRequest(
     DateSplitterTool,

@@ -5,7 +5,7 @@ type IsChoreMessageArgs = { answer: boolean }
 export const IsChoreMessageTool: ITool<IsChoreMessageArgs, boolean> = {
   name: 'IsChoreMessage',
   description:
-    'Tool to answer whether the message contains any mention of chores that were completed.',
+    'Tool to answer whether the message contains any mention of chores that were completed by the person who sent it.',
   arguments: {
     type: 'object',
     properties: {

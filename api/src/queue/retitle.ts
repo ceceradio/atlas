@@ -9,6 +9,7 @@ export const retitleQueue = new Queue<RetitleJobData>('retitle', { redis: redisC
 
 type RetitleJobData = {
   uuid: string
+  organizationId?: string
 }
 
 retitleQueue.process(async (job) => {
@@ -18,6 +19,7 @@ retitleQueue.process(async (job) => {
   if (!conversation) throw new Error()
   messageOrganizationQueue.add({
     uuid: conversation.organization.uuid,
+    organizationId: conversation.organization.uuid,
     message: {
       type: 'update',
       entity: 'conversation',

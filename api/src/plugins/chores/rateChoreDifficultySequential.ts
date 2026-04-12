@@ -1,13 +1,13 @@
 import { ITracer } from '@/atlas/ai-compat/langfuse/ITracer'
 import { Atlas } from '@/atlas/Atlas'
-import { ChoreRaterTool } from './ChoreRaterTool'
-import { DatedChores, DatedRatedChores } from './ChoreTypes'
+import { magi } from '@/lib/magi'
+import { DatedChores, DatedRatedChores, RatedChore } from './ChoreTypes'
+import { SingleChoreRaterTool } from './SingleChoreRaterTool'
 
-export async function choreDifficultyRater(
-  input: DatedChores,
-  tracer?: ITracer,
-): Promise<DatedRatedChores> {
-  const systemMessage = `You are a helpful assistant that reads a list of chores that someone did, and rates the difficulty of each chore as small, medium, or large. Some chores listed are not actually chores, and those should be rated as "not a chore".
+const TRIALS = 3
+const REQUIRED_AGREEMENTS = 2
+
+const systemMessage = `You are a helpful assistant that reads a single chore that someone did, and rates its difficulty as small, medium, large, or extra large. If the item is not actually a chore, rate it as "not a chore".
 The difficulty should be rated based on the amount of time and effort it would take to complete the chore, as well as the level of skill required.
 When you see a chore that is not included in the lists below, use your understanding of the chore to rate its difficulty.
 
@@ -19,7 +19,6 @@ Some rooms are bigger than others, so some rooms are medium difficulty to vacuum
 ## Not a chore
 
 - "moved my stuff out of [any room]": not a chore
-- "put away drying rack dishes": not a chore
 - "refilled soap in bathroom": not a chore
 - "replaced toilet paper": not a chore
 - "replaced paper towels": not a chore
@@ -27,6 +26,7 @@ Some rooms are bigger than others, so some rooms are medium difficulty to vacuum
 
 ## Small
 
+- "put away drying rack dishes": small
 - "cleaned the kitchen countertops": small
 - "rinsed the kitchen sink": small
 - "unloaded the dishwasher": small
@@ -35,13 +35,12 @@ Some rooms are bigger than others, so some rooms are medium difficulty to vacuum
 - "cleaned the stovetop": small
 - "quickly wet swiffed [any room]": small
 - "quickly vacuumed [any room]": small
-- "vacuumed second [floor hallway, grand stairway, narrow stairway]": small
+- "vacuumed second [hallway, any stairway, any stairway landing, any entryway]": small
 - "took out [any room] trash": small
 - "tied off and rebagged any amount of garage can(s)": small
 - "took trash out to curb": small
 - "put away groceries": small
 - "replaced air filter": small
-- 
 
 ## Medium
 
@@ -74,31 +73,69 @@ Some rooms are bigger than others, so some rooms are medium difficulty to vacuum
 - "repaired [any appliance/furniture/fixture]": large
 - "reorganized [a large area like a room]": large
 
+## Extra large
+
+- "deep cleaned the kitchen (counters, sink, stovetop, microwave, appliances)": extra large
+- "deep cleaned the [any bathroom] (toilet, tub/shower, sink, floor, mirrors)": extra large
+- "thoroughly cleaned the entire [any room] top to bottom": extra large
+- "cooked a large meal/feast for the household": extra large
+- "grocery shopped and put away a full grocery order": extra large
+- "completed a major home repair or installation": extra large
+- "reorganized or cleaned out the entire garage/basement/attic": extra large
+- "did a full house clean/tidy": extra large
+
+
 # Tool call examples
 
-Input: ["cleaned the stovetop", "did the laundry for the green bathroom", "took out the trash"]
-Tool call: ChoreRater({ "chores": [
-  { "chore": "cleaned the stovetop", "difficulty": "small" },
-  { "chore": "did the laundry for the green bathroom", "difficulty": "medium" },
-  { "chore": "took out the trash", "difficulty": "small" }
-]})
+Input: "cleaned the stovetop"
+Output: "small"
 
-Input: ["cooked dinner", "unloaded the dishwasher", "replaced toilet paper"]
-Tool call: ChoreRater({ "chores": [
-  { "chore": "cooked dinner", "difficulty": "large" },
-  { "chore": "unloaded the dishwasher", "difficulty": "small" },
-  { "chore": "replaced toilet paper", "difficulty": "not a chore" }
-]})
+Input: "did the laundry for the green bathroom"
+Output: "medium"
+
+Input: "took out the trash"
+Output: "small"
+
+Input: "reloaded small dishwasher"
+Output: "small"
+
+Input: "loaded and ran dishwasher"
+Output: "medium"
+
+Input: "cooked dinner"
+Output: "large"
+
+Input: "unloaded the dishwasher"
+Output: "small"
+
 `
-  const { chores } = await Atlas.processToolRequest(
-    ChoreRaterTool,
-    systemMessage,
-    [JSON.stringify({ chores: input.chores }, undefined, 2)],
-    undefined,
-    tracer,
+
+export async function rateChoreDifficultySequential(
+  input: DatedChores,
+  tracer?: ITracer,
+): Promise<DatedRatedChores> {
+  const rated = await Promise.all(
+    input.chores.map(async (chore): Promise<RatedChore> => {
+      const difficulty = await magi(
+        async () => {
+          const result = await Atlas.processToolRequest(
+            SingleChoreRaterTool,
+            systemMessage,
+            [chore],
+            undefined,
+            tracer,
+          )
+          return result.difficulty
+        },
+        REQUIRED_AGREEMENTS,
+        TRIALS,
+      )
+      return { chore, difficulty }
+    }),
   )
+
   return {
     date: input.date,
-    chores,
+    chores: rated,
   }
 }

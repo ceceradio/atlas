@@ -1,5 +1,6 @@
 import ReactMarkdown from 'react-markdown'
 import useAtlasSocket from '@/helpers/useAtlasSocket'
+import { markSeen } from '@/helpers/useLastSeen'
 import {
   useGetConversationQuery,
   useCreateConversationMutation,
@@ -16,20 +17,22 @@ type ConversationMessage = IAPIConversation['messages'][number] & { uuid?: strin
 import {
   Box,
   Button,
+  Flex,
   HStack,
   Heading,
   Skeleton,
   Textarea,
   VStack,
 } from '@chakra-ui/react'
-import { useNavigate } from 'react-router-dom'
-import { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { Dispatch, SetStateAction, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 
 export type MessageProps = {
   name: string
   content: string
   role: string
+  time?: number
 }
 
 export function FalseConversation() {
@@ -42,11 +45,47 @@ export function FalseConversation() {
   )
 }
 
-export function Message({ name, role, content }: MessageProps) {
+export function Message({ name, role, content, time }: MessageProps) {
+  const isUser = role === 'user'
+  const timeString = (() => {
+    if (!time) return null
+    const d = new Date(time)
+    const now = new Date()
+    const sameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+    const timeStr = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    if (sameDay) return timeStr
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined }) + ' ' + timeStr
+  })()
   return (
-    <Box>
-      <strong>{name || role}</strong>:{' '}
-      <ReactMarkdown>{content}</ReactMarkdown>
+    <Box
+      display="flex"
+      flexDirection="column"
+      alignItems={isUser ? 'flex-end' : 'flex-start'}
+      marginBottom="0.75rem"
+    >
+      <Flex
+        fontSize="xs"
+        color="gray.500"
+        marginBottom="0.2rem"
+        paddingX="0.25rem"
+        gap="0.4rem"
+        alignItems="baseline"
+      >
+        {isUser && timeString && <Box color="gray.400">{timeString}</Box>}
+        <Box>{name || role}</Box>
+        {!isUser && timeString && <Box color="gray.400">{timeString}</Box>}
+      </Flex>
+      <Box
+        background={isUser ? 'green.50' : 'white'}
+        borderRadius="lg"
+        boxShadow="sm"
+        padding="0.6rem 0.9rem"
+        maxWidth="80%"
+        fontSize="sm"
+        sx={{ 'ul, ol': { paddingLeft: '1.5rem' } }}
+      >
+        <ReactMarkdown>{content}</ReactMarkdown>
+      </Box>
     </Box>
   )
 }
@@ -63,6 +102,7 @@ export function ConversationPanel({ uuid }: ConversationPanelProps) {
   const token = useSelector(selectToken)
   const { sendJsonMessage, lastJsonMessage } = useAtlasSocket()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const { data: conversation, isLoading: conversationLoading } = useGetConversationQuery(uuid!, {
     skip: !token || !uuid,
@@ -88,19 +128,39 @@ export function ConversationPanel({ uuid }: ConversationPanelProps) {
     if (msg.type === 'message' && msg.role === 'user') setPendingUserMessage({ name: msg.name, content: msg.content })
   }, [lastJsonMessage, uuid])
 
+  useEffect(() => {
+    if (!uuid || !conversation?.lastMessageAt) return
+    markSeen(uuid, new Date(conversation.lastMessageAt).getTime())
+  }, [uuid, conversation?.lastMessageAt])
+
+  // Auto-send initial content passed via router state (from new conversation creation)
+  const initialContentSentRef = useRef(false)
+  useEffect(() => {
+    const initialContent = (location.state as { initialContent?: string } | null)?.initialContent
+    if (!uuid || !initialContent || initialContentSentRef.current) return
+    initialContentSentRef.current = true
+    window.history.replaceState({}, '')
+    setIsLoadingMessage(true)
+    createMessageMutation({ uuid, content: initialContent })
+      .unwrap()
+      .then(() => { setStreamingContent(null); setPendingUserMessage(null) })
+      .finally(() => setIsLoadingMessage(false))
+  }, [uuid, location.state])
+
   const onSubmit = async () => {
     setIsLoadingMessage(true)
     setContent('')
     try {
       if (!uuid) {
-        const { uuid: newUuid } = await createConversationMutation(content).unwrap()
-        navigate(`/zone/conversation/${newUuid}`)
+        const newConversation = await createConversationMutation().unwrap()
+        navigate(`/zone/conversation/${newConversation.uuid}`, { state: { initialContent: content } })
       } else {
         await createMessageMutation({ uuid, content }).unwrap()
         setStreamingContent(null)
         setPendingUserMessage(null)
       }
     } finally {
+      if (!uuid) return // loading state managed by auto-send effect after navigation
       setIsLoadingMessage(false)
     }
   }
@@ -109,6 +169,7 @@ export function ConversationPanel({ uuid }: ConversationPanelProps) {
 
   return (
     <ConversatonPanelDisplay
+      key={uuid}
       conversation={conversation}
       isLoadingMessage={isLoadingMessage}
       streamingContent={streamingContent}
@@ -149,9 +210,13 @@ function ConversatonPanelDisplay({
 }: ConversationPanelDisplayProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
+  useLayoutEffect(() => {
+    bottomRef.current?.scrollIntoView()
+  }, [])
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [conversation?.messages, streamingContent, pendingUserMessage, isLoadingMessage])
+  }, [conversation?.messages?.length, streamingContent, pendingUserMessage, isLoadingMessage])
 
   return (
     <VStack
@@ -188,6 +253,7 @@ function ConversatonPanelDisplay({
           name="content"
           value={content}
           rows={3}
+          background="white"
           onChange={(event) => setContent(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.shiftKey) {
@@ -238,8 +304,8 @@ function Messages({
     <>
       {messages &&
         messages.map((message, index) => {
-          const msg = message as { name?: string; content?: string; role: string; uuid?: string }
-          const { name, uuid, role, content } = msg
+          const msg = message as { name?: string; content?: string; role: string; uuid?: string; time?: number }
+          const { name, uuid, role, content, time } = msg
           return (
             <div className={uuid} key={uuid || index}>
               <Box>
@@ -247,6 +313,7 @@ function Messages({
                   name={name || ''}
                   role={role}
                   content={content || ''}
+                  time={time}
                 />
               </Box>
             </div>

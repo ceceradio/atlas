@@ -60,6 +60,15 @@ Tool call: IsChoreMessage({ "answer": false })
 Message: "lol yeah that happens"
 Tool call: IsChoreMessage({ "answer": false })
 
+Message: "i saw you do the dishwasher"
+Tool call: IsChoreMessage({ "answer": false })
+
+Message: "you did do that"
+Tool call: IsChoreMessage({ "answer": false })
+
+Message: "i saw you do the dishwasher, we did it together"
+Tool call: IsChoreMessage({ "answer": true })
+
 Use the provided tool to respond. Only call the tool once.`,
     [IsChoreMessageTool],
   )

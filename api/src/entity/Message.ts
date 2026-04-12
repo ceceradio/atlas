@@ -84,6 +84,8 @@ export class Message implements IMessage {
       content,
       created,
     })
-    return dataSource.getRepository(Message).save(message)
+    const saved = await dataSource.getRepository(Message).save(message)
+    await dataSource.getRepository(Conversation).update(conversation.uuid, { lastMessageAt: saved.created })
+    return saved
   }
 }

@@ -8,6 +8,7 @@ import {
   Column,
   CreateDateColumn,
   DataSource,
+  DeleteDateColumn,
   Entity,
   EntityManager,
   Equal,
@@ -43,6 +44,12 @@ export class Conversation implements IConversation {
     default: () => 'CURRENT_TIMESTAMP(6)',
   })
   public created: Date
+
+  @Column({ type: 'timestamp', nullable: true })
+  public lastMessageAt: Date | null
+
+  @DeleteDateColumn({ type: 'timestamp', nullable: true })
+  public deletedAt: Date | null
 
   static async create(dataSource: DataSource | EntityManager, creator: User) {
     const conversation = dataSource.getRepository(Conversation).create({
@@ -86,6 +93,9 @@ export class Conversation implements IConversation {
       where: { uuid },
       order: {
         created: 'ASC',
+        messages: {
+          created: 'ASC',
+        },
       },
       relations: {
         ...relations,
@@ -144,6 +154,7 @@ export class Conversation implements IConversation {
       uuid: this.uuid,
       title: this.title,
       created: this.created,
+      lastMessageAt: this.lastMessageAt,
       creator: this.creator,
       organization: this.organization,
       messages: this.messages.map((message) => message.toAtlasMessage()),

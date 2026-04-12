@@ -1,4 +1,6 @@
 import { messageOrganizationQueue } from '@/queue/messageOrganization'
+import { choreMessageQueue } from '@/queue/choreMessage'
+import { attachJobEventBroadcaster } from '@/queue/jobEvents'
 import { RawData, Server, ServerOptions, WebSocketServer } from 'ws'
 import { Antennae } from './Antennae'
 import { UserSocket } from './UserSocket'
@@ -7,7 +9,7 @@ import { joined } from './joined'
 import { update } from './update'
 
 export type AtlasSocketMessage<T> = {
-  type: 'update' | 'identify' | 'identified' | 'joined' | 'snapshot' | 'message'
+  type: 'update' | 'identify' | 'identified' | 'joined' | 'snapshot' | 'message' | 'jobEvent'
 } & T
 export type Identify = {
   token: string
@@ -64,6 +66,10 @@ messageOrganizationQueue.process(async (job) => {
   return true
 })
 
+attachJobEventBroadcaster(choreMessageQueue, 'chores', (orgId, event) => {
+  routeToOrganization(orgId, event)
+})
+
 function requireIdentification<T>(
   userSocket: UserSocket,
   fn: (userSocket: UserSocket, parsedMessage: AtlasSocketMessage<object>) => T,
@@ -93,7 +99,6 @@ export async function routeToOrganization<T>(
   message: AtlasSocketMessage<T>,
 ) {
   if (!uuid) return console.error('big problem. uuid doesnt work.')
-  if (!organizationAntennae[uuid])
-    return console.error('small problem. no clients available')
+  if (!organizationAntennae[uuid]) return
   organizationAntennae[uuid].broadcast(message)
 }

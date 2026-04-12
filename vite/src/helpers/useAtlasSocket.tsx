@@ -31,6 +31,12 @@ export default function useAtlasSocket() {
       },
       reconnectInterval: 1000,
       share: true,
+      onOpen: () => {
+        setIdentificationState(IdentificationState.IDENTIFYING)
+        getAccessTokenSilently().then((token) =>
+          sendJsonMessageOriginal({ type: 'identify', token }),
+        )
+      },
       onClose: () => {
         setIdentificationState(IdentificationState.UNIDENTIFIED)
       },

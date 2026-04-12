@@ -8,7 +8,7 @@ export type DatedChores = {
   chores: string[]
 }
 
-export type ChoreDifficulty = 'not a chore' | 'small' | 'medium' | 'large'
+export type ChoreDifficulty = 'not a chore' | 'small' | 'medium' | 'large' | 'extra large'
 
 export type DatedRatedChores = {
   date: string
