@@ -1,38 +1,26 @@
-import { Box, Button } from '@chakra-ui/react'
-import { Link } from 'react-router-dom'
+import { Center, Spinner, Text, VStack } from '@chakra-ui/react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth0 } from '@auth0/auth0-react'
+import { useEffect } from 'react'
 
 export default function Home() {
+  const { isAuthenticated, isLoading } = useAuth0()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (isLoading) return
+    if (isAuthenticated) navigate('/zone')
+    else navigate('/login')
+  }, [isAuthenticated, isLoading, navigate])
+
   return (
-    <Box>
-      <Box>You require an organization to login</Box>
-      <Button>
-        <Link to="/login">Login</Link>
-      </Button>
-      <Box>
-        its da smart home ai you&apos;ve always wanted but now its freakin real
-        <hr />
-        <ul>
-          <li>groceries running out? not a problem</li>
-          <li>dishes not getting done? we got ya back</li>
-          <li>wanna know when ya laundry is done? u can do that</li>
-          <li>
-            how good is your budget? could you do anything different? we can
-            answer that
-          </li>
-          <li>
-            do you want a huge beautiful woman with a prominent nose to live in
-            your computer in your home and help you with it?
-          </li>
-          <li>
-            do you struggle with reminders for what to do around the house?
-            especially maintenance tasks that have to occur once a year?
-          </li>
-          <li>
-            do you want to know how equitable your financial arrangement is?
-          </li>
-          <p>how about a computer that lives rent free in your home?</p>
-        </ul>
-      </Box>
-    </Box>
+    <Center h="100vh" bg="gray.50">
+      <VStack spacing={4}>
+        <Spinner size="xl" color="purple.400" thickness="3px" />
+        <Text color="gray.400" fontSize="sm" letterSpacing="wide">
+          loading session...
+        </Text>
+      </VStack>
+    </Center>
   )
 }

@@ -4,12 +4,26 @@ import { useGetConversationsQuery, useDeleteConversationMutation, useWhoamiQuery
 import { selectToken } from '@/store/authSlice'
 import { AtlasSocketMessage, IAPIConversation } from '@atlas/api'
 import {
+  AddIcon, CalendarIcon, ChatIcon, DownloadIcon, StarIcon,
+} from '@chakra-ui/icons'
+import {
   AlertDialog, AlertDialogBody, AlertDialogContent, AlertDialogFooter,
   AlertDialogHeader, AlertDialogOverlay,
-  Box, Button, Divider, Flex, IconButton, Menu, MenuButton, MenuItem, MenuList, Text, VStack,
+  Box, Button, createIcon, Divider, Flex, Icon, IconButton, Menu, MenuButton, MenuItem, MenuList, Text, VStack,
 } from '@chakra-ui/react'
+
+const GroupIcon = createIcon({
+  displayName: 'GroupIcon',
+  viewBox: '0 0 24 24',
+  path: (
+    <path
+      fill="currentColor"
+      d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
+    />
+  ),
+})
 import { useNavigate, useLocation } from 'react-router-dom'
-import { PropsWithChildren, useEffect, useRef, useState } from 'react'
+import React, { PropsWithChildren, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { ActivityQueue } from './ActivityQueue'
 
@@ -38,15 +52,17 @@ function NavItem({
   path,
   currentPath,
   onClick,
+  icon,
 }: {
   label: string
   path: string
   currentPath: string
   onClick: (path: string) => void
+  icon?: React.ElementType
 }) {
   const isActive = currentPath === path
   return (
-    <Box
+    <Flex
       width="100%"
       padding="0.45rem 0.75rem"
       borderRadius="md"
@@ -59,9 +75,12 @@ function NavItem({
       _hover={{ background: 'white', color: 'gray.900', boxShadow: 'sm' }}
       onClick={() => onClick(path)}
       transition="all 0.1s"
+      alignItems="center"
+      gap="0.5rem"
     >
+      {icon && <Icon as={icon} boxSize="0.85em" flexShrink={0} />}
       {label}
-    </Box>
+    </Flex>
   )
 }
 
@@ -74,6 +93,7 @@ function SidePanelDisplay({ list, onNavigate }: SidePanelProps) {
   const { pathname } = useLocation()
   const token = useSelector(selectToken)
   const [deleteTarget, setDeleteTarget] = useState<IAPIConversation | null>(null)
+  const [showAll, setShowAll] = useState(false)
   const [deleteConversation, { isLoading: deleting }] = useDeleteConversationMutation()
   const cancelRef = useRef<HTMLButtonElement>(null)
   const { data: currentUser } = useWhoamiQuery(undefined, { skip: !token })
@@ -91,15 +111,15 @@ function SidePanelDisplay({ list, onNavigate }: SidePanelProps) {
   }
 
   const choreNavItems = [
-    { label: 'House Stats', path: '/zone/house-stats' },
-    { label: 'Chore Profiles', path: '/zone/chore-profiles' },
-    { label: 'Import Chores', path: '/zone/chore-import' },
-    { label: 'Chore Messages', path: '/zone/chore-messages' },
-    { label: 'Chores', path: '/zone/chores' },
+    { label: 'House Stats', path: '/zone/house-stats', icon: StarIcon },
+    { label: 'Chore Profiles', path: '/zone/chore-profiles', icon: GroupIcon },
+    { label: 'Import Chores', path: '/zone/chore-import', icon: DownloadIcon },
+    { label: 'Chore Messages', path: '/zone/chore-messages', icon: ChatIcon },
+    { label: 'Chores', path: '/zone/chores', icon: CalendarIcon },
   ]
 
   const memberNavItems = [
-    { label: 'Invite Members', path: '/zone/invite' },
+    { label: 'Invite Members', path: '/zone/invite', icon: AddIcon },
   ]
 
   return (
@@ -131,7 +151,7 @@ function SidePanelDisplay({ list, onNavigate }: SidePanelProps) {
 
         {list.length > 0 && (
           <>
-            {list.slice(0, 5).map((conversation) => {
+            {(showAll ? list : list.slice(0, 5)).map((conversation) => {
               const { uuid, title, creator } = conversation
               const path = `/zone/conversation/${uuid}`
               const isActive = pathname === path
@@ -197,6 +217,19 @@ function SidePanelDisplay({ list, onNavigate }: SidePanelProps) {
                 </Flex>
               )
             })}
+            {list.length > 5 && (
+              <Text
+                fontSize="xs"
+                color="gray.500"
+                cursor="pointer"
+                textAlign="center"
+                paddingY="0.25rem"
+                _hover={{ color: 'gray.700' }}
+                onClick={() => setShowAll((v) => !v)}
+              >
+                {showAll ? 'show less' : `${list.length - 5} more...`}
+              </Text>
+            )}
             <Flex alignItems="center" gap="0.5rem" marginY="0.5rem" paddingX="0.25rem">
               <Divider borderColor="gray.400" />
               <Text fontSize="xs" color="gray.500" fontWeight="medium" whiteSpace="nowrap" flexShrink={0}>
@@ -214,6 +247,7 @@ function SidePanelDisplay({ list, onNavigate }: SidePanelProps) {
             path={item.path}
             currentPath={pathname}
             onClick={navigate}
+            icon={item.icon}
           />
         ))}
 
@@ -232,6 +266,7 @@ function SidePanelDisplay({ list, onNavigate }: SidePanelProps) {
             path={item.path}
             currentPath={pathname}
             onClick={navigate}
+            icon={item.icon}
           />
         ))}
 
