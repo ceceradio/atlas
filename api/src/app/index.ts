@@ -2,6 +2,7 @@ import bodyParser from 'body-parser'
 import express from 'express'
 
 import { authApp } from './authorize'
+import { auditLogApp } from './auditLogApp'
 import { choresApp } from './chores'
 import { conversationApp } from './conversation'
 import { dbMiddleware } from './db'
@@ -20,5 +21,6 @@ app.use(inviteManagementApp)
 app.use(conversationApp)
 app.use(choresApp)
 app.use(organizationApp)
+app.use(auditLogApp)
 // errorHandler must go last
 app.use(errorHandler)

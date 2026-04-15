@@ -28,7 +28,7 @@ const jobsSlice = createSlice({
       const cutoff = Date.now() - 30_000
       for (const id of Object.keys(state)) {
         const job = state[id]
-        if (job.status !== 'completed' && job.status !== 'failed' && job.updatedAt < cutoff) {
+        if (job.status === 'failed' && job.updatedAt < cutoff) {
           delete state[id]
         }
       }

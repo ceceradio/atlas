@@ -1,5 +1,7 @@
 import { ITracer } from '@/atlas/ai-compat/langfuse/ITracer'
 import { Atlas } from '@/atlas/Atlas'
+import { getDataSource } from '@/data-source'
+import { ChoreDefinition } from '@/entity/ChoreDefinition'
 import { ChoreSplitterTool } from './ChoreSplitterTool'
 import { DatedChores, DatedChoresRaw } from './ChoreTypes'
 
@@ -20,10 +22,51 @@ ${Object.entries(commonShortnames)
 
 When you see a shortname in the input, replace it with the full name in the output. For example, if the input is "cleaned the gbr", the output should be "cleaned the green bathroom".`
 
+async function buildChoreDefinitionsPrompt(): Promise<string> {
+  try {
+    const db = await getDataSource()
+    // Load all unsized definitions — these are the ones still being named/discovered
+    const defs = await db
+      .getRepository(ChoreDefinition)
+      .createQueryBuilder('def')
+      .where('def.size IS NULL')
+      .orderBy('def.name', 'ASC')
+      .getMany()
+
+    if (defs.length === 0) return ''
+
+    const canonicals = defs.filter((d) => d.aliasOfId === null)
+    const aliasesByCanonical = new Map<string, string[]>()
+    for (const d of defs) {
+      if (d.aliasOfId) {
+        const list = aliasesByCanonical.get(d.aliasOfId) ?? []
+        list.push(d.name)
+        aliasesByCanonical.set(d.aliasOfId, list)
+      }
+    }
+
+    const lines = canonicals.map((c) => {
+      const aliases = aliasesByCanonical.get(c.id)
+      return aliases?.length
+        ? `- ${c.name} (also known as: ${aliases.join(', ')})`
+        : `- ${c.name}`
+    })
+
+    return `\n# Known Chore Names
+
+The following chore names are already recognized in this household. When you output chore descriptions, prefer using these exact names (or close variants that preserve the meaning). Aliases are listed to help you recognize alternate ways the same chore might be mentioned.
+
+${lines.join('\n')}`
+  } catch {
+    return ''
+  }
+}
+
 export async function choreSplitter(
   input: DatedChoresRaw,
   tracer?: ITracer,
 ): Promise<DatedChores> {
+  const choreDefinitionsPrompt = await buildChoreDefinitionsPrompt()
   const systemMessage = `You are a helpful assistant that reads a list of chores that someone did, and splits them into individual chores in an array.
 The chores need to be split into an array of items that each counts as a single chore.
 For example, if the input is "I cleaned the kitchen and did the laundry", the output should be ["cleaned the kitchen", "did the laundry"].
@@ -77,7 +120,7 @@ Input: \`Today I:
 • cleaned the stove vent hood
 • small dishwasher load, unload, and run (nighttime)\`
 Tool call: \`ChoreSplitter({ "chores": ["vacuumed the grand stairway", "vacuumed the kitchen", "vacuumed the pink bathroom", "vacuumed the 2nd floor hallway", "cleaned the small kitchen table", "cleaned the game room table", "cleaned the stove vent hood", "small dishwasher load, unload, and run (nighttime)"] })\`
-`
+${choreDefinitionsPrompt}`
   const { chores } = await Atlas.processToolRequest(
     ChoreSplitterTool,
     systemMessage,

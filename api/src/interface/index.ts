@@ -1,4 +1,5 @@
 export { IAuthProfile } from './AuthProfile'
+export { IChoreDefinition, ChoreDifficulty } from './ChoreDefinition'
 export { IAPIConversation, IConversation } from './Conversation'
 export { IDepository } from './Depository'
 export * from './Message'

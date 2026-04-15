@@ -1,11 +1,17 @@
 import { postgres } from '@/data-source'
 import { Chore } from '@/entity/Chore'
+import { ChoreDefinition } from '@/entity/ChoreDefinition'
 import { ChoreMessage } from '@/entity/ChoreMessage'
 import { ChoreReaction } from '@/entity/ChoreReaction'
+import { embedQwen } from '@/atlas/ai-compat/openai/embed-qwen'
+import { setChoreDefinitionEmbedding } from '@/plugins/chores/choreDefinitionEmbeddings'
+import { ChoreDifficulty } from '@/plugins/chores/ChoreTypes'
 import { choreMessageQueue, ChoreMessageJobData } from '@/queue/choreMessage'
 import express from 'express'
+import { auditLog } from './auditLog'
 import { authorize } from './authorize'
 import { withTransaction } from './db'
+import { AuditAction } from '@/entity/AuditLog'
 
 const EXCLUDED_REACTIONS = new Set(['✨'])
 
@@ -387,10 +393,14 @@ choresApp.post('/chore-messages/bulk', async (request, response) => {
     return response.status(400).json({ error: 'Expected a non-empty array of messages' })
   }
 
-  const orgId = response.locals.user.organization.uuid
+  const { user } = response.locals
+  const orgId = user.organization.uuid
   const jobs = await Promise.all(
     messages.map((msg) => choreMessageQueue.add({ ...msg, organizationId: orgId })),
   )
+
+  await auditLog(user.uuid, orgId, AuditAction.CHORE_MESSAGES_BULK_QUEUED, 'ChoreMessage', null, undefined, undefined, { count: messages.length })
+
   return response.json({ queued: jobs.length, ids: jobs.map((j) => j.id) })
 })
 
@@ -401,12 +411,15 @@ choresApp.post('/chore-message/:id/reprocess', withTransaction(async (request, r
   const choreMessage = await db.findOne(ChoreMessage, { where: { id } })
   if (!choreMessage) return response.sendStatus(404)
 
-  const orgId = response.locals.user.organization.uuid
+  const { user } = response.locals
+  const orgId = user.organization.uuid
   const job = await choreMessageQueue.add({
     discordMessageId: choreMessage.discordMessageId,
     discordChannelId: choreMessage.discordChannelId,
     organizationId: orgId,
   })
+
+  await auditLog(user.uuid, orgId, AuditAction.CHORE_MESSAGE_REPROCESSED, 'ChoreMessage', id)
 
   return response.status(202).json({ jobId: job.id })
 }))
@@ -461,10 +474,129 @@ choresApp.patch('/chore/:id', async (request, response) => {
   })
   if (!chore) return response.sendStatus(404)
 
+  const before = { description: chore.description, doneAt: chore.doneAt, difficulty: chore.difficulty }
+
   if (description !== undefined) chore.description = description
   if (doneAt !== undefined) chore.doneAt = new Date(doneAt)
   if (difficulty !== undefined) chore.difficulty = difficulty
 
   await choreRepo.save(chore)
+
+  const { user } = response.locals
+  await auditLog(
+    user.uuid,
+    user.organization.uuid,
+    AuditAction.CHORE_UPDATED,
+    'Chore',
+    id,
+    before,
+    { description: chore.description, doneAt: chore.doneAt, difficulty: chore.difficulty },
+  )
+
   return response.json(chore.toApi())
+})
+
+// ── Chore Definitions ──────────────────────────────────────────────────────
+
+choresApp.get('/chore-definitions', async (request, response) => {
+  const { sized } = request.query as Record<string, string>
+  const repo = postgres.getRepository(ChoreDefinition)
+  const qb = repo.createQueryBuilder('def').orderBy('def.name', 'ASC')
+  if (sized === 'true') qb.andWhere('def.size IS NOT NULL')
+  if (sized === 'false') qb.andWhere('def.size IS NULL')
+  const definitions = await qb.getMany()
+  return response.json(definitions.map((d) => d.toApi()))
+})
+
+choresApp.post('/chore-definitions', async (request, response) => {
+  const { name, size, aliasOfId }: { name?: string; size?: ChoreDifficulty; aliasOfId?: string | null } = request.body
+  if (!name || typeof name !== 'string' || name.trim() === '') {
+    return response.status(400).json({ error: 'name is required' })
+  }
+  const repo = postgres.getRepository(ChoreDefinition)
+  if (aliasOfId != null) {
+    const target = await repo.findOne({ where: { id: aliasOfId } })
+    if (!target) return response.status(400).json({ error: 'Target definition not found' })
+    if (target.aliasOfId != null) return response.status(400).json({ error: 'Cannot alias an alias — only top-level definitions can be aliased' })
+  }
+  const def = repo.create({ name: name.trim(), size: size ?? null, aliasOfId: aliasOfId ?? null })
+  try {
+    await repo.save(def)
+  } catch (err: unknown) {
+    const pg = err as { code?: string }
+    if (pg.code === '23505') return response.status(409).json({ error: 'A definition with that name already exists' })
+    throw err
+  }
+
+  const { user } = response.locals
+  await auditLog(user.uuid, user.organization.uuid, AuditAction.CHORE_DEFINITION_CREATED, 'ChoreDefinition', def.id, undefined, { name: def.name, size: def.size, aliasOfId: def.aliasOfId })
+
+  embedQwen(def.name)
+    .then((embedding) => setChoreDefinitionEmbedding(def.id, embedding))
+    .catch((err) => console.error(`Failed to embed chore definition "${def.name}":`, err))
+
+  return response.status(201).json(def.toApi())
+})
+
+choresApp.patch('/chore-definitions/:id', async (request, response) => {
+  const { id } = request.params
+  const { name, size, aliasOfId }: { name?: string; size?: ChoreDifficulty | null; aliasOfId?: string | null } = request.body
+  const repo = postgres.getRepository(ChoreDefinition)
+  const def = await repo.findOne({ where: { id } })
+  if (!def) return response.sendStatus(404)
+
+  const before = { name: def.name, size: def.size, aliasOfId: def.aliasOfId }
+
+  if (name !== undefined) def.name = name.trim()
+  if ('size' in request.body) def.size = size ?? null
+  if ('aliasOfId' in request.body) {
+    if (aliasOfId != null) {
+      if (aliasOfId === id) return response.status(400).json({ error: 'A definition cannot alias itself' })
+      const target = await repo.findOne({ where: { id: aliasOfId } })
+      if (!target) return response.status(400).json({ error: 'Target definition not found' })
+      if (target.aliasOfId != null) return response.status(400).json({ error: 'Cannot alias an alias — only top-level definitions can be aliased' })
+    }
+    def.aliasOfId = aliasOfId ?? null
+  }
+  try {
+    await repo.save(def)
+  } catch (err: unknown) {
+    const pg = err as { code?: string }
+    if (pg.code === '23505') return response.status(409).json({ error: 'A definition with that name already exists' })
+    throw err
+  }
+
+  const { user } = response.locals
+  await auditLog(
+    user.uuid,
+    user.organization.uuid,
+    AuditAction.CHORE_DEFINITION_UPDATED,
+    'ChoreDefinition',
+    id,
+    before,
+    { name: def.name, size: def.size, aliasOfId: def.aliasOfId },
+  )
+
+  if (def.name !== before.name) {
+    embedQwen(def.name)
+      .then((embedding) => setChoreDefinitionEmbedding(def.id, embedding))
+      .catch((err) => console.error(`Failed to re-embed chore definition "${def.name}":`, err))
+  }
+
+  return response.json(def.toApi())
+})
+
+choresApp.delete('/chore-definitions/:id', async (request, response) => {
+  const { id } = request.params
+  const repo = postgres.getRepository(ChoreDefinition)
+  const def = await repo.findOne({ where: { id } })
+  if (!def) return response.sendStatus(404)
+
+  const before = { name: def.name, size: def.size, aliasOfId: def.aliasOfId }
+  await repo.remove(def)
+
+  const { user } = response.locals
+  await auditLog(user.uuid, user.organization.uuid, AuditAction.CHORE_DEFINITION_DELETED, 'ChoreDefinition', id, before)
+
+  return response.sendStatus(204)
 })

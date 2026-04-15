@@ -1,4 +1,5 @@
 import { LangfuseTracer } from '@/atlas/ai-compat/langfuse/LangfuseTracer'
+import { seedChoreDefinitions } from '@/cli'
 import listOrganizations from '@/cli/list-organizations'
 import listUsers from '@/cli/list-users'
 import registerOrganization from '@/cli/register-organization'
@@ -45,6 +46,7 @@ async function initializeRepl() {
 
   const state = {
     tracer: new LangfuseTracer('atlas-repl', 'repl', crypto.randomUUID()),
+    seedChoreDefinitions: () => seedChoreDefinitions(db),
     processChoreMessage,
     testLatestChoreMessage,
     db,

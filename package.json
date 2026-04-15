@@ -12,6 +12,7 @@
     "docker-setup": "npm run make-cert && npm run make-hosts",
     "docker-reset": "docker compose down --volumes",
     "make-migration": "npx typeorm-ts-node-commonjs migration:generate -d ./api/src/data-source.ts ./api/src/migration/migration",
+    "run-migrations": "cd api && export $(grep -v '^#' ../.env.api | xargs) && PGHOST=localhost npx typeorm-ts-node-commonjs migration:run -d ./src/data-source.ts",
     "make-cert": "sh make-cert.sh",
     "make-hosts": "echo 'chocolate.local resolves via mDNS — no hosts entry needed'",
     "start": "npm run docker",
@@ -20,7 +21,7 @@
     "start:api": "cd api && npm start",
     "test": "run-s test:*",
     "test:api": "cd api && npm test",
-    "repl": "cd api && PGHOST=localhost OLLAMA_HOST=localhost npm run repl"
+    "repl": "cd api && PGHOST=localhost OLLAMA_HOST=localhost REDIS_HOST=localhost npm run repl"
   },
   "author": "cece wren <cecelia.wren@gmail.com>",
   "license": "UNLICENSED",
@@ -31,6 +32,7 @@
   "dependencies": {
     "@types/node": "^22.14.0",
     "ajv": "^8.13.0",
-    "dotenv": "^16.5.0"
+    "dotenv": "^16.5.0",
+    "typeorm": "^0.3.28"
   }
 }

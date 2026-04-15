@@ -9,6 +9,7 @@ import {
   User,
 } from 'discord.js'
 
+
 import { Atlas } from '@/atlas/Atlas'
 import { IAssistant, IAtlasMessage, IAtlasRequest } from '@/atlas/IAtlas'
 import { ITracer } from '@/atlas/ai-compat/langfuse/ITracer'
@@ -29,10 +30,11 @@ export class AtlasDiscord implements AtlasPlugin {
   constructor() {
     // Create a new client instance
     this.client = new Client({
-      partials: [Partials.Channel],
+      partials: [Partials.Channel, Partials.Message, Partials.Reaction],
       intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildMessageReactions,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.DirectMessageTyping,

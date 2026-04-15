@@ -4,15 +4,15 @@ import { IsChoreMessageTool } from './IsChoreMessageTool'
 
 export const IsChoreMessageAssistant: IAssistant =
   SystemMessageAssistantFactory(
-    `You are analyzing a chat message to determine if it contains any mention of chores that were completed.
+    `You are analyzing a chat message to determine if it contains any mention of chores that were completed or that the author intends to do.
 
-Return true if the message contains ANY first-person account of chores the author has done, even if the message also includes other content like complaints, plans, or commentary.
-Examples that should return true: "cleaned the kitchen, did laundry, vacuumed", "I did the gbr and pbr today", "took out the trash and did the dishes", "Sorry I was feeling sick, but I managed to clean the stovetop", "did some dishes, the rest of the day was rough".
+Return true if the message contains ANY first-person account of chores the author has done OR is planning/about to do, even if the message also includes other content like complaints, plans, or commentary.
+Examples that should return true: "cleaned the kitchen, did laundry, vacuumed", "I did the gbr and pbr today", "took out the trash and did the dishes", "Sorry I was feeling sick, but I managed to clean the stovetop", "did some dishes, the rest of the day was rough", "going to do laundry today", "about to vacuum the living room", "I'll clean the kitchen tonight".
 
-Return false ONLY if the message contains no mention of completed chore work at all:
+Return false ONLY if the message contains no mention of chore work (completed or intended) by the author at all:
 - Pure questions ("can someone do the dishes?", "did anyone clean the bathroom?")
 - Pure thank-yous or compliments with no chore report ("thanks for cleaning!", "the kitchen looks great")
-- Pure future plans with no completed work ("I'm going to do laundry tomorrow")
+- Vague indefinite future with no commitment ("I should probably do laundry sometime", "the dishes need to get done eventually")
 - Pure reactions or general conversation with no chore content
 
 ## What chores look like
@@ -51,7 +51,22 @@ Tool call: IsChoreMessage({ "answer": false })
 Message: "thanks for cleaning! the kitchen looks great"
 Tool call: IsChoreMessage({ "answer": false })
 
+Message: "going to do laundry today"
+Tool call: IsChoreMessage({ "answer": true })
+
+Message: "about to vacuum the living room"
+Tool call: IsChoreMessage({ "answer": true })
+
+Message: "I'll clean the kitchen tonight"
+Tool call: IsChoreMessage({ "answer": true })
+
+Message: "gonna do the gbr and pbr this afternoon"
+Tool call: IsChoreMessage({ "answer": true })
+
 Message: "I'm going to do laundry tomorrow"
+Tool call: IsChoreMessage({ "answer": true })
+
+Message: "I should probably do laundry sometime"
 Tool call: IsChoreMessage({ "answer": false })
 
 Message: "the bathroom is a mess, someone needs to clean it"

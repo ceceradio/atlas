@@ -63,6 +63,14 @@ export function HouseStatsPanel() {
     [totalChores, days],
   );
 
+  const avgPerDayPerMember = useMemo(
+    () =>
+      days > 0 && profiles.length > 0
+        ? parseFloat((totalChores / days / profiles.length).toFixed(2))
+        : 0,
+    [totalChores, days, profiles.length],
+  );
+
   const weightedAvgPerDay = useMemo(
     () =>
       parseFloat(
@@ -71,6 +79,14 @@ export function HouseStatsPanel() {
           .toFixed(2),
       ),
     [profiles],
+  );
+
+  const weightedAvgPerDayPerMember = useMemo(
+    () =>
+      profiles.length > 0
+        ? parseFloat((weightedAvgPerDay / profiles.length).toFixed(2))
+        : 0,
+    [weightedAvgPerDay, profiles.length],
   );
 
   const totalWeighted = useMemo(
@@ -181,12 +197,14 @@ export function HouseStatsPanel() {
           <Flex gap="1rem" flexWrap="wrap">
             <StatCard label="Total chores" value={totalChores} />
             <StatCard label="Avg chores / day" value={avgPerDay} />
+            <StatCard label="Avg / day / member" value={avgPerDayPerMember} />
             <StatCard label="Weighted avg" value={weightedAvgPerDay} />
+            <StatCard label="Weighted avg / member" value={weightedAvgPerDayPerMember} />
             <StatCard label="Total weighted" value={totalWeighted} />
             <StatCard label="Days tracked" value={days} />
           </Flex>
 
-          {/* Combined daily bar chart */}
+          {/* Combined daily bar chart — weighted */}
           <Box
             background="white"
             borderRadius="lg"
@@ -205,6 +223,27 @@ export function HouseStatsPanel() {
               All members combined
             </Text>
             <DailyBarChart dailyData={mergedDailyData} />
+          </Box>
+
+          {/* Combined daily bar chart — unweighted counts */}
+          <Box
+            background="white"
+            borderRadius="lg"
+            boxShadow="sm"
+            padding="1.25rem"
+          >
+            <Text
+              fontSize="md"
+              fontWeight="semibold"
+              color="gray.700"
+              mb="0.25rem"
+            >
+              Chore counts
+            </Text>
+            <Text fontSize="xs" color="gray.500" mb="0.25rem">
+              All members combined, unweighted
+            </Text>
+            <DailyBarChart dailyData={mergedDailyData} weighted={false} />
           </Box>
         </>
       )}

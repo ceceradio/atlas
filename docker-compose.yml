@@ -30,7 +30,7 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d
       - ./nginx/certs:/etc/ssl/certs
   db:
-    image: postgres:14.5-alpine
+    image: pgvector/pgvector:pg14
     restart: always
     networks:
       - atlas
@@ -45,6 +45,8 @@ services:
     image: redis:alpine
     networks:
       - atlas
+    ports:
+      - "6379:6379"
 
   # Langfuse
   clickhouse:

@@ -6,7 +6,8 @@
   "scripts": {
     "start": "nodemon",
     "test": "jest **/*.spec.ts",
-    "repl": "node --experimental-repl-await -r ts-node/register -r ./src/env.ts ./src/repl/index.ts"
+    "repl": "node --experimental-repl-await -r ts-node/register -r ./src/env.ts ./src/repl/index.ts",
+    "cli": "PGHOST=localhost REDIS_HOST=localhost VLLM_HOST=localhost LANGFUSE_BASEURL=http://localhost:3010 ts-node -r ./src/env.ts ./src/cli"
   },
   "author": "",
   "license": "ISC",
@@ -36,11 +37,12 @@
     "openai": "^4.47.1",
     "pg": "^8.11.1",
     "pg-native": "^3.0.1",
+    "pgvector": "^0.2.1",
     "reflect-metadata": "^0.1.13",
     "rss-to-json": "^2.1.1",
     "ts-newsapi": "^1.0.2",
     "ts-node": "^10.9.1",
-    "typeorm": "^0.3.17",
+    "typeorm": "^0.3.28",
     "typescript": "^5.1.6",
     "ws": "^8.13.0"
   },

@@ -6,6 +6,7 @@ import {
   XAxis,
   YAxis,
   Tooltip,
+  TooltipProps,
 } from 'recharts'
 import { useChoreDateRange } from '@/helpers/useChoreDateRange'
 import { DIFFICULTY_COLORS, DAILY_WEIGHTS } from './constants'
@@ -14,6 +15,7 @@ type DailyEntry = { date: string; small: number; medium: number; large: number; 
 
 interface Props {
   dailyData: DailyEntry[]
+  weighted?: boolean
 }
 
 const segments: { key: string; label: string; color: string }[] = [
@@ -23,7 +25,39 @@ const segments: { key: string; label: string; color: string }[] = [
   { key: 'extraLarge', label: 'extra large', color: DIFFICULTY_COLORS['extra large'] },
 ]
 
-export function DailyBarChart({ dailyData }: Props) {
+function CustomTooltip({ active, payload, label, weighted }: TooltipProps<number, string> & { weighted?: boolean }) {
+  if (!active || !payload?.length) return null
+  const iso = payload[0]?.payload?._iso as string | undefined
+  const dayOfWeek = iso
+    ? new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long', timeZone: 'America/New_York' })
+    : ''
+  const total = payload.reduce((sum, entry) => sum + ((entry.value as number) ?? 0), 0)
+  return (
+    <Box background="white" border="1px solid" borderColor="gray.200" borderRadius="md" padding="0.5rem 0.75rem" fontSize="xs" boxShadow="sm" minWidth="150px">
+      <Text fontWeight="bold" color="gray.700" mb="0.1rem">{dayOfWeek}</Text>
+      <Text color="gray.400" mb="0.35rem">{label}</Text>
+      {payload.map((entry) => {
+        const name = entry.dataKey as string
+        const raw = entry.payload[`_${name}`] as number
+        if (!raw) return null
+        const w = DAILY_WEIGHTS[name as keyof typeof DAILY_WEIGHTS]
+        const displayName = name === 'extraLarge' ? 'extra large' : name
+        return (
+          <Box key={name} display="flex" justifyContent="space-between" gap="1rem">
+            <Text color={entry.fill}>{displayName}</Text>
+            <Text color="gray.600">{weighted ? `${raw} × ${w} = ${entry.value}` : raw}</Text>
+          </Box>
+        )
+      })}
+      <Box borderTop="1px solid" borderColor="gray.100" mt="0.35rem" pt="0.35rem" display="flex" justifyContent="space-between">
+        <Text fontWeight="semibold" color="gray.600">total</Text>
+        <Text fontWeight="semibold" color="gray.700">{total}</Text>
+      </Box>
+    </Box>
+  )
+}
+
+export function DailyBarChart({ dailyData, weighted = true }: Props) {
   const [from, , to] = useChoreDateRange()
 
   if (dailyData.length === 0) {
@@ -42,11 +76,11 @@ export function DailyBarChart({ dailyData }: Props) {
     const d = byDate[iso] ?? { date: iso, small: 0, medium: 0, large: 0, extraLarge: 0 }
     return {
       date: new Date(iso + 'T12:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'America/New_York' }),
-      small: d.small * DAILY_WEIGHTS.small,
-      medium: d.medium * DAILY_WEIGHTS.medium,
-      large: d.large * DAILY_WEIGHTS.large,
-      extraLarge: d.extraLarge * DAILY_WEIGHTS.extraLarge,
-      // raw counts for tooltip
+      small: weighted ? d.small * DAILY_WEIGHTS.small : d.small,
+      medium: weighted ? d.medium * DAILY_WEIGHTS.medium : d.medium,
+      large: weighted ? d.large * DAILY_WEIGHTS.large : d.large,
+      extraLarge: weighted ? d.extraLarge * DAILY_WEIGHTS.extraLarge : d.extraLarge,
+      _iso: iso,
       _small: d.small,
       _medium: d.medium,
       _large: d.large,
@@ -59,22 +93,13 @@ export function DailyBarChart({ dailyData }: Props) {
 
   return (
     <Box paddingTop="0.75rem" overflowX="auto">
-      <Text fontSize="xs" color="gray.500" mb="0.5rem">Weighted chores per day</Text>
+      <Text fontSize="xs" color="gray.500" mb="0.5rem">{weighted ? 'Weighted chores per day' : 'Chore count per day'}</Text>
       <Box width={`${chartWidth}px`} height="200px">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 8, right: 16, bottom: 24, left: 0 }} barSize={12} barCategoryGap="20%">
             <XAxis dataKey="date" tick={{ fontSize: 11 }} angle={-45} textAnchor="end" interval={0} />
             <YAxis tick={{ fontSize: 11 }} allowDecimals={false} width={28} />
-            <Tooltip
-              cursor={{ fill: 'rgba(0,0,0,0.05)' }}
-              formatter={(value, name, props) => {
-                const rawKey = `_${name}` as keyof typeof props.payload
-                const raw = props.payload[rawKey] as number
-                const w = DAILY_WEIGHTS[name as keyof typeof DAILY_WEIGHTS]
-                const label = name === 'extraLarge' ? 'extra large' : name
-                return [`${raw} × ${w} = ${value}`, label]
-              }}
-            />
+            <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} content={<CustomTooltip weighted={weighted} />} />
             {segments.map(({ key, color }, i) => (
               <Bar
                 key={key}

@@ -77,8 +77,8 @@ export class ChoreChannelMonitor implements AtlasPlugin {
 
   private async saveChoreMessage(message: Message<boolean>, result: DatedRatedChores[], editedAt: Date | null) {
     const choreMessageRepo = this.dataSource.getRepository(ChoreMessage)
-    const saved = await choreMessageRepo.save(
-      choreMessageRepo.create({
+    await choreMessageRepo.upsert(
+      {
         discordMessageId: message.id,
         discordChannelId: message.channelId,
         discordAuthorId: message.author.id,
@@ -86,8 +86,10 @@ export class ChoreChannelMonitor implements AtlasPlugin {
         content: message.content,
         postedAt: message.createdAt,
         editedAt,
-      }),
+      },
+      { conflictPaths: ['discordMessageId'], skipUpdateIfNoValuesChanged: true },
     )
+    const saved = await choreMessageRepo.findOneOrFail({ where: { discordMessageId: message.id } })
     await this.saveChores(saved, result)
   }
 

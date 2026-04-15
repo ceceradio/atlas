@@ -16,7 +16,13 @@ function toYMD(date: Date): string {
 }
 
 function getEasternHour(date: Date): number {
-  const hour = parseInt(new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: 'numeric', hourCycle: 'h23' }).format(date))
+  const hour = parseInt(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: TZ,
+      hour: 'numeric',
+      hourCycle: 'h23',
+    }).format(date),
+  )
   return hour === 24 ? 0 : hour
 }
 
@@ -30,7 +36,11 @@ export async function dateSplitter(
   const isEarlyMorning = getEasternHour(sentAt) < 4
   const today = isEarlyMorning ? dateSubtract(sentAt, 1, 'day') : sentAt
   const yesterday = dateSubtract(today, 1, 'day')
-  const sentAtStr = sentAt.toLocaleString('en-US', { timeZone: TZ, dateStyle: 'full', timeStyle: 'long' })
+  const sentAtStr = sentAt.toLocaleString('en-US', {
+    timeZone: TZ,
+    dateStyle: 'full',
+    timeStyle: 'long',
+  })
   const systemMessage = `\
 You are a helpful assistant that reads a message describing chores and splits it into groups by the day each chore was performed.
 
@@ -40,11 +50,18 @@ You are a helpful assistant that reads a message describing chores and splits it
 - Messages often describe chores done in the past; occasionally they include future intentions — include those too, assigned to the correct date.
 - Messages are sent in the Eastern timezone. Times after midnight but before 4am are treated as belonging to the previous calendar day (the sender has not yet gone to sleep).
 - Use the original wording from the message in each split — do not paraphrase or summarize.
-- If the message contains no temporal references at all, assign everything to today (\`${toYMD(today)}\`).
+- If the message contains no temporal references at all, assign everything to today (\`${toYMD(
+    today,
+  )}\`).
+- If the message contains things like 3/5, 4/5, or 5/5 it likely does not refer to dates, but rather to how many people participated in a chore. Do not treat these as dates.
 
 ## Context
 
-Message sent: \`${sentAtStr}\`${isEarlyMorning ? ' *(early morning — treated as the previous calendar day)*' : ''}
+Message sent: \`${sentAtStr}\`${
+    isEarlyMorning
+      ? ' *(early morning — treated as the previous calendar day)*'
+      : ''
+  }
 - "today" = \`${toYMD(today)}\`
 - "yesterday" = \`${toYMD(yesterday)}\`
 

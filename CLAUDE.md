@@ -31,6 +31,7 @@ Run from the **project root** unless noted.
 | `npm run start-node` | Run api + vite locally without Docker |
 | `npm run test` | Run all tests |
 | `npm run make-migration` | Generate TypeORM migration from entity changes |
+| `npm run run-migrations` | Run pending TypeORM migrations against local DB |
 | `npm run repl` | Start interactive REPL with API context loaded |
 
 **API only** (`cd api`):
@@ -39,6 +40,31 @@ Run from the **project root** unless noted.
 npm start          # nodemon, watches src/
 npm test           # Jest (*.spec.ts)
 npm run repl       # ts-node REPL with env + TypeORM
+npm run cli <command> [--flags]  # run a CLI script (connects to local DB/Redis/VLLM)
+```
+
+**CLI commands** (`cd api && npm run cli <command>`):
+
+The `cli` script sets `PGHOST=localhost`, `REDIS_HOST=localhost`, and `VLLM_HOST=localhost` automatically, so it works against a locally exposed stack (e.g. Docker with forwarded ports or `npm run start-node`).
+
+| Command | Args | Purpose |
+|---|---|---|
+| `listUsers` | — | List all registered users |
+| `registerUser` | `--uuid <uuid> --name <name>` | Register a new user |
+| `registerOrganization` | `--name <name>` | Create an organization |
+| `retitleConversation` | `--uuid <uuid>` | Re-run title generation for a conversation |
+| `responseEvaluation` | `--uuid <uuid>` | Evaluate AI response for a conversation |
+| `respond` | `--uuid <uuid>` | Trigger an AI response for a conversation |
+| `seedChoreDefinitions` | — | Seed the chore definitions table |
+| `backfillChoreEmbeddings` | — | Backfill embeddings for existing chore definitions |
+| `testChoreMatching` | — | Run labeled accuracy test for chore definition matching |
+
+Example:
+
+```bash
+cd api
+npm run cli testChoreMatching
+npm run cli registerUser -- --uuid abc-123 --name "Alice"
 ```
 
 **Vite only** (`cd vite`):
@@ -189,7 +215,7 @@ Server name: `chocolate.local` (resolves via mDNS, no hosts entry needed).
 - **Async**: Prefer async/await; AI recursion in `Atlas.ts` uses recursive async methods
 - **Error handling**: Global Express error middleware in `api/src/app/errors.ts` — must be registered last
 - **Migrations**: Generate with `npm run make-migration` from root; migration files go in `api/src/migration/`
-- **CLI scripts**: `api/src/cli/` — invoked via `npx ts-node ./src/cli <command>`
+- **CLI scripts**: `api/src/cli/` — invoked via `npm run cli <command>` from the `api/` directory
 
 ---
 

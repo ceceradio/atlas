@@ -12,8 +12,10 @@ import Chores from './app/pages/Chores'
 import ChoreMessages from './app/pages/ChoreMessages'
 import ChoreImport from './app/pages/ChoreImport'
 import ChoreProfiles from './app/pages/ChoreProfiles'
+import ChoreDefinitions from './app/pages/ChoreDefinitions'
 import HouseStats from './app/pages/HouseStats'
 import Invite from './app/pages/Invite'
+import AuditLog from './app/pages/AuditLog'
 
 export default function App() {
   return (
@@ -30,8 +32,10 @@ export default function App() {
           <Route path="/zone/chore-messages" element={<ChoreMessages />} />
           <Route path="/zone/chore-import" element={<ChoreImport />} />
           <Route path="/zone/chore-profiles" element={<ChoreProfiles />} />
+          <Route path="/zone/chore-definitions" element={<ChoreDefinitions />} />
           <Route path="/zone/house-stats" element={<HouseStats />} />
           <Route path="/zone/invite" element={<Invite />} />
+          <Route path="/zone/audit-log" element={<AuditLog />} />
         </Routes>
       </Providers>
     </BrowserRouter>

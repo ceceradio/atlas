@@ -1,5 +1,6 @@
 import { DataSource } from 'typeorm'
 import { ChoreChannelMonitor } from './chores/ChoreChannelMonitor'
+import { ChoreDefinitionVoteMonitor } from './chores/ChoreDefinitionVoteMonitor'
 import { AtlasDiscord } from './discord'
 import { AtlasTrading } from './trading'
 
@@ -7,6 +8,7 @@ export class AtlasPlugins {
   discord: AtlasDiscord
   trading: AtlasTrading
   choreMonitor?: ChoreChannelMonitor
+  choreDefinitionVoteMonitor?: ChoreDefinitionVoteMonitor
 
   constructor() {
     this.discord = new AtlasDiscord()
@@ -27,8 +29,18 @@ export class AtlasPlugins {
     )
   }
 
+  initChoreDefinitionVoteMonitor(dataSource: DataSource, channelId: string) {
+    this.choreDefinitionVoteMonitor?.close()
+    this.choreDefinitionVoteMonitor = new ChoreDefinitionVoteMonitor(
+      this.discord.client,
+      dataSource,
+      channelId,
+    )
+  }
+
   async close() {
     await this.choreMonitor?.close()
+    await this.choreDefinitionVoteMonitor?.close()
     await this.trading?.close()
     await this.discord.close()
   }

@@ -25,6 +25,7 @@ import {
 import { useState } from 'react'
 import { useJobPoller } from '@/helpers/useJobPoller'
 import { useChoreDateRange } from '@/helpers/useChoreDateRange'
+import { useReduxString } from '@/helpers/useReduxString'
 import { ChoreRow, ChoreEditRow, EditForm } from './ChoreRowShared'
 import { ChoreReactionList } from './ChoreReactionList'
 import { EXCLUDED_REACTIONS } from './ChoreProfiles/constants'
@@ -37,7 +38,7 @@ function truncate(text: string, max = 120) {
 
 export function ChoreMessagesPanel() {
   const [page, setPage] = useState(1)
-  const [authorId, setAuthorId] = useState('')
+  const [authorId, setAuthorId] = useReduxString('chore-messages-author-id')
   const [from, setFrom, to, setTo] = useChoreDateRange()
   const [noChores, setNoChores] = useState(false)
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())

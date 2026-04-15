@@ -1,5 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
-import { IAPIConversation, IAPIOrganization, OrganizationSettings } from '@atlas/api'
+import { IAPIConversation, IAPIOrganization, IChoreDefinition, ChoreDifficulty, OrganizationSettings } from '@atlas/api'
 import { selectToken } from './authSlice'
 
 // ---- Types (moved from client/) ----------------------------------------
@@ -137,6 +137,34 @@ export type DiscordChannel = {
   guildName: string
 }
 
+export type AuditLogEntry = {
+  id: string
+  createdAt: string
+  userId: string | null
+  userName: string | null
+  organizationId: string
+  action: string
+  entityType: string
+  entityId: string | null
+  before: Record<string, unknown> | null
+  after: Record<string, unknown> | null
+  metadata: Record<string, unknown> | null
+}
+
+export type AuditLogResponse = {
+  data: AuditLogEntry[]
+  total: number
+  page: number
+  limit: number
+}
+
+export type AuditLogParams = {
+  page?: number
+  limit?: number
+  action?: string
+  entityType?: string
+}
+
 // ---- Param types -----------------------------------------------------------
 
 export type ChoreQueryParams = {
@@ -174,7 +202,7 @@ export const atlasApi = createApi({
       return headers
     },
   }),
-  tagTypes: ['Conversation', 'Chores', 'ChoreMessages', 'Authors', 'Organization', 'DiscordChannels', 'DiscordMessages', 'Invites'],
+  tagTypes: ['Conversation', 'Chores', 'ChoreMessages', 'Authors', 'Organization', 'DiscordChannels', 'DiscordMessages', 'Invites', 'ChoreDefinitions', 'AuditLog'],
   endpoints: (builder) => ({
 
     // -- Auth ----------------------------------------------------------------
@@ -269,7 +297,7 @@ export const atlasApi = createApi({
         method: 'PATCH',
         body: patch,
       }),
-      invalidatesTags: [{ type: 'Chores', id: 'LIST' }, { type: 'ChoreMessages', id: 'LIST' }],
+      invalidatesTags: [{ type: 'Chores', id: 'LIST' }, { type: 'ChoreMessages', id: 'LIST' }, { type: 'AuditLog', id: 'LIST' }],
     }),
 
     reprocessChoreMessage: builder.mutation<{ jobId: string | number }, string>({
@@ -277,7 +305,7 @@ export const atlasApi = createApi({
         url: `/chore-message/${choreMessageId}/reprocess`,
         method: 'POST',
       }),
-      invalidatesTags: [{ type: 'Chores', id: 'LIST' }, { type: 'ChoreMessages', id: 'LIST' }],
+      invalidatesTags: [{ type: 'Chores', id: 'LIST' }, { type: 'ChoreMessages', id: 'LIST' }, { type: 'AuditLog', id: 'LIST' }],
     }),
 
     // -- Chore messages ------------------------------------------------------
@@ -315,7 +343,7 @@ export const atlasApi = createApi({
         method: 'POST',
         body: messages,
       }),
-      invalidatesTags: [{ type: 'ChoreMessages', id: 'LIST' }],
+      invalidatesTags: [{ type: 'ChoreMessages', id: 'LIST' }, { type: 'AuditLog', id: 'LIST' }],
     }),
 
     // -- Invites -------------------------------------------------------------
@@ -360,12 +388,64 @@ export const atlasApi = createApi({
         method: 'PATCH',
         body: { settings },
       }),
-      invalidatesTags: [{ type: 'Organization', id: 'SINGLE' }],
+      invalidatesTags: [{ type: 'Organization', id: 'SINGLE' }, { type: 'AuditLog', id: 'LIST' }],
     }),
 
     getDiscordChannels: builder.query<DiscordChannel[], void>({
       query: () => '/discord/channels',
       providesTags: [{ type: 'DiscordChannels', id: 'LIST' }],
+    }),
+
+    // -- Chore Definitions ---------------------------------------------------
+
+    getChoreDefinitions: builder.query<IChoreDefinition[], { sized?: boolean } | void>({
+      query: (params) => {
+        const q = new URLSearchParams()
+        if (params && params.sized !== undefined) q.set('sized', String(params.sized))
+        const qs = q.toString()
+        return `/chore-definitions${qs ? `?${qs}` : ''}`
+      },
+      providesTags: [{ type: 'ChoreDefinitions', id: 'LIST' }],
+    }),
+
+    createChoreDefinition: builder.mutation<IChoreDefinition, { name: string; size?: ChoreDifficulty; aliasOfId?: string | null }>({
+      query: (body) => ({
+        url: '/chore-definitions',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'ChoreDefinitions', id: 'LIST' }, { type: 'AuditLog', id: 'LIST' }],
+    }),
+
+    updateChoreDefinition: builder.mutation<IChoreDefinition, { id: string; patch: { name?: string; size?: ChoreDifficulty | null; aliasOfId?: string | null } }>({
+      query: ({ id, patch }) => ({
+        url: `/chore-definitions/${id}`,
+        method: 'PATCH',
+        body: patch,
+      }),
+      invalidatesTags: [{ type: 'ChoreDefinitions', id: 'LIST' }, { type: 'AuditLog', id: 'LIST' }],
+    }),
+
+    deleteChoreDefinition: builder.mutation<void, string>({
+      query: (id) => ({
+        url: `/chore-definitions/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: [{ type: 'ChoreDefinitions', id: 'LIST' }, { type: 'AuditLog', id: 'LIST' }],
+    }),
+
+    // -- Audit Log -----------------------------------------------------------
+
+    getAuditLog: builder.query<AuditLogResponse, AuditLogParams>({
+      query: (params = {}) => {
+        const q = new URLSearchParams()
+        if (params.page) q.set('page', String(params.page))
+        if (params.limit) q.set('limit', String(params.limit))
+        if (params.action) q.set('action', params.action)
+        if (params.entityType) q.set('entityType', params.entityType)
+        return `/audit-log?${q}`
+      },
+      providesTags: [{ type: 'AuditLog', id: 'LIST' }],
     }),
   }),
 })
@@ -396,4 +476,9 @@ export const {
   useGetOrganizationQuery,
   useUpdateOrganizationSettingsMutation,
   useGetDiscordChannelsQuery,
+  useGetChoreDefinitionsQuery,
+  useCreateChoreDefinitionMutation,
+  useUpdateChoreDefinitionMutation,
+  useDeleteChoreDefinitionMutation,
+  useGetAuditLogQuery,
 } = atlasApi

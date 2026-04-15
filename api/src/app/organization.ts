@@ -1,10 +1,12 @@
 import { getDataSource } from '@/data-source'
+import { AuditAction } from '@/entity/AuditLog'
 import { ChoreMessage } from '@/entity/ChoreMessage'
 import { Organization } from '@/entity/Organization'
 import { OrganizationSettings } from '@/interface/OrganizationSettings'
 import { getAtlasPlugins } from '@/plugins'
 import express from 'express'
 import { In } from 'typeorm'
+import { auditLog } from './auditLog'
 import { authorize } from './authorize'
 
 export const organizationApp = express()
@@ -30,17 +32,30 @@ organizationApp.patch('/organization', async (request, response) => {
   const org = await Organization.get(db, user.organization.uuid)
   if (!org) return response.sendStatus(404)
 
-  const prevChannelId = org.settings?.discord?.choresChannelId
-  const nextChannelId = settings?.discord?.choresChannelId
+  const prevChoresChannelId = org.settings?.discord?.choresChannelId
+  const nextChoresChannelId = settings?.discord?.choresChannelId
+  const prevVoteChannelId = org.settings?.discord?.choreDefinitionsChannelId
+  const nextVoteChannelId = settings?.discord?.choreDefinitionsChannelId
 
+  const beforeSettings = org.settings
   org.settings = settings
   await db.getRepository(Organization).save(org)
 
-  if (nextChannelId && nextChannelId !== prevChannelId) {
-    getAtlasPlugins().initChoreMonitor(db, nextChannelId)
-  } else if (!nextChannelId && prevChannelId) {
+  const orgId = user.organization.uuid
+  await auditLog(user.uuid, orgId, AuditAction.ORGANIZATION_SETTINGS_UPDATED, 'Organization', orgId, beforeSettings, settings)
+
+  if (nextChoresChannelId && nextChoresChannelId !== prevChoresChannelId) {
+    getAtlasPlugins().initChoreMonitor(db, nextChoresChannelId)
+  } else if (!nextChoresChannelId && prevChoresChannelId) {
     await getAtlasPlugins().choreMonitor?.close()
     getAtlasPlugins().choreMonitor = undefined
+  }
+
+  if (nextVoteChannelId && nextVoteChannelId !== prevVoteChannelId) {
+    getAtlasPlugins().initChoreDefinitionVoteMonitor(db, nextVoteChannelId)
+  } else if (!nextVoteChannelId && prevVoteChannelId) {
+    await getAtlasPlugins().choreDefinitionVoteMonitor?.close()
+    getAtlasPlugins().choreDefinitionVoteMonitor = undefined
   }
 
   return response.json(org.toApi())

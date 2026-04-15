@@ -5,6 +5,7 @@ import { app } from './app'
 import { getDataSource } from './data-source'
 import { Organization } from './entity/Organization'
 import { initAtlasPlugins } from './plugins'
+import { ensureVoteTallyScheduled } from './queue/choreDefinitionVoteTally'
 import { AtlasWebsocketServer } from './ws'
 
 const atlasPlugins = initAtlasPlugins()
@@ -15,9 +16,13 @@ getDataSource().then(async (_db) => {
   console.log('Database initialized')
   const orgs = await Organization.list(db)
   for (const org of orgs) {
-    const channelId = org.settings?.discord?.choresChannelId
-    if (channelId) atlasPlugins.initChoreMonitor(db, channelId)
+    const choresChannelId = org.settings?.discord?.choresChannelId
+    if (choresChannelId) atlasPlugins.initChoreMonitor(db, choresChannelId)
+
+    const voteChannelId = org.settings?.discord?.choreDefinitionsChannelId
+    if (voteChannelId) atlasPlugins.initChoreDefinitionVoteMonitor(db, voteChannelId)
   }
+  await ensureVoteTallyScheduled()
 })
 
 const rest = app.listen(process.env.port || 3001)

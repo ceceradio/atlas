@@ -48,7 +48,7 @@ export const Atlas = {
         ...messages.map(
           (content): IAtlasMessage => ({
             role: 'user',
-            name: userName || 'Input Message',
+            name: userName || '',
             content,
             time: Date.now(),
           }),

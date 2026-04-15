@@ -1,3 +1,4 @@
+import { choreDefinitionDiscoveryQueue } from '@/queue/choreDefinitionDiscovery'
 import { ITracer } from '@/atlas/ai-compat/langfuse/ITracer'
 import { rateChoreDifficultySequential } from './rateChoreDifficultySequential'
 import { choreSplitter } from './choreSplitter'
@@ -29,6 +30,12 @@ export async function processChoreMessage(
     for (const datedChore of datedChoreMessage) {
       const chores = await choreSplitter(datedChore, tracer)
       console.log(chores)
+
+      // Fire-and-forget: discover new chore definitions without blocking rating
+      choreDefinitionDiscoveryQueue
+        .add({ chores: chores.chores })
+        .catch((err) => console.error('choreDefinitionDiscovery queue error:', err))
+
       const ratedChores = await rateChoreDifficultySequential(chores, tracer)
       console.log(ratedChores)
       choreRatings.push(ratedChores)

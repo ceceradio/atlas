@@ -1,4 +1,4 @@
-import useAtlasSocket from '@/helpers/useAtlasSocket'
+import useAtlasSocket, { IdentificationState } from '@/helpers/useAtlasSocket'
 import { hasUnread } from '@/helpers/useLastSeen'
 import { useGetConversationsQuery, useDeleteConversationMutation, useWhoamiQuery } from '@/store/atlasApi'
 import { selectToken } from '@/store/authSlice'
@@ -9,8 +9,31 @@ import {
 import {
   AlertDialog, AlertDialogBody, AlertDialogContent, AlertDialogFooter,
   AlertDialogHeader, AlertDialogOverlay,
-  Box, Button, createIcon, Divider, Flex, Icon, IconButton, Menu, MenuButton, MenuItem, MenuList, Text, VStack,
+  Box, Button, createIcon, Divider, Flex, Icon, IconButton, Menu, MenuButton, MenuItem, MenuList, Text, Tooltip, VStack,
 } from '@chakra-ui/react'
+import { ReadyState } from 'react-use-websocket'
+
+const BookIcon = createIcon({
+  displayName: 'BookIcon',
+  viewBox: '2 2 20 20',
+  path: (
+    <path
+      fill="currentColor"
+      d="M19 3H7c-1.1 0-2 .9-2 2v1c-1.1 0-2 .9-2 2v11c0 1.65 1.35 3 3 3h11c1.65 0 3-1.35 3-3V5c0-1.1-.9-2-2-2zm-1 16c0 .55-.45 1-1 1H6c-.55 0-1-.45-1-1V8c0-.55.45-1 1-1h12v12zm0-13H7V5h11v1zM9 11h6v1.5H9zm0 3h6v1.5H9zm0 3h4v1.5H9z"
+    />
+  ),
+})
+
+const WifiIcon = createIcon({
+  displayName: 'WifiIcon',
+  viewBox: '0 0 24 24',
+  path: (
+    <path
+      fill="currentColor"
+      d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"
+    />
+  ),
+})
 
 const GroupIcon = createIcon({
   displayName: 'GroupIcon',
@@ -22,6 +45,17 @@ const GroupIcon = createIcon({
     />
   ),
 })
+
+const AuditIcon = createIcon({
+  displayName: 'AuditIcon',
+  viewBox: '0 0 24 24',
+  path: (
+    <path
+      fill="currentColor"
+      d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-7-7zm-1 15H8v-2h4v2zm3-4H8v-2h7v2zm0-4H8V7h7v2zM13 3.5V9h5.5L13 3.5z"
+    />
+  ),
+})
 import { useNavigate, useLocation } from 'react-router-dom'
 import React, { PropsWithChildren, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
@@ -30,11 +64,13 @@ import { ActivityQueue } from './ActivityQueue'
 type SidePanelProps = {
   list: IAPIConversation[]
   onNavigate?: () => void
+  readyState: ReadyState
+  identificationState: IdentificationState
 }
 
 export function SidePanel({ onNavigate }: { onNavigate?: () => void }) {
   const token = useSelector(selectToken)
-  const { lastJsonMessage } = useAtlasSocket()
+  const { lastJsonMessage, readyState, identificationState } = useAtlasSocket()
   const { data: list = [], refetch } = useGetConversationsQuery(undefined, { skip: !token })
 
   useEffect(() => {
@@ -44,7 +80,7 @@ export function SidePanel({ onNavigate }: { onNavigate?: () => void }) {
     }
   }, [lastJsonMessage, refetch])
 
-  return <SidePanelDisplay list={list} onNavigate={onNavigate} />
+  return <SidePanelDisplay list={list} onNavigate={onNavigate} readyState={readyState} identificationState={identificationState} />
 }
 
 function NavItem({
@@ -88,7 +124,7 @@ function DotsIcon() {
   return <Text fontSize="md" lineHeight="1" letterSpacing="0.05em">···</Text>
 }
 
-function SidePanelDisplay({ list, onNavigate }: SidePanelProps) {
+function SidePanelDisplay({ list, onNavigate, readyState, identificationState }: SidePanelProps) {
   const router = useNavigate()
   const { pathname } = useLocation()
   const token = useSelector(selectToken)
@@ -116,10 +152,12 @@ function SidePanelDisplay({ list, onNavigate }: SidePanelProps) {
     { label: 'Import Chores', path: '/zone/chore-import', icon: DownloadIcon },
     { label: 'Chore Messages', path: '/zone/chore-messages', icon: ChatIcon },
     { label: 'Chores', path: '/zone/chores', icon: CalendarIcon },
+    { label: 'Chore Definitions', path: '/zone/chore-definitions', icon: BookIcon },
   ]
 
   const memberNavItems = [
     { label: 'Invite Members', path: '/zone/invite', icon: AddIcon },
+    { label: 'Audit Log', path: '/zone/audit-log', icon: AuditIcon },
   ]
 
   return (
@@ -276,6 +314,9 @@ function SidePanelDisplay({ list, onNavigate }: SidePanelProps) {
       <Flex flex="1" minHeight={0} flexDirection="column" padding="0 0.75rem 0.75rem">
         <ActivityQueue />
       </Flex>
+
+      {/* Connection indicator */}
+      <ConnectionIndicator readyState={readyState} identificationState={identificationState} />
       </Flex>
 
       <AlertDialog
@@ -302,6 +343,28 @@ function SidePanelDisplay({ list, onNavigate }: SidePanelProps) {
         </AlertDialogOverlay>
       </AlertDialog>
     </>
+  )
+}
+
+function ConnectionIndicator({ readyState, identificationState }: { readyState: ReadyState; identificationState: IdentificationState }) {
+  const connected = identificationState === IdentificationState.IDENTIFIED
+  const connecting = readyState === ReadyState.OPEN || readyState === ReadyState.CONNECTING
+  const color = connected ? 'green.500' : connecting ? 'yellow.500' : 'red.500'
+  const label = connected ? 'Connected' : connecting ? 'Connecting…' : 'Disconnected'
+
+  return (
+    <Tooltip label={label} placement="right" hasArrow>
+      <Flex
+        padding="0.5rem 0.75rem"
+        alignItems="center"
+        gap="0.4rem"
+        cursor="default"
+        flexShrink={0}
+      >
+        <Icon as={WifiIcon} boxSize="0.9rem" color={color} />
+        <Text fontSize="xs" color={color} userSelect="none">{label}</Text>
+      </Flex>
+    </Tooltip>
   )
 }
 

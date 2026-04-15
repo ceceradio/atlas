@@ -5,6 +5,7 @@ import * as Redis from 'ioredis'
 import OpenAI from 'openai'
 import {
   ChatCompletionAssistantMessageParam,
+  ChatCompletionCreateParams,
   ChatCompletionMessage,
   ChatCompletionMessageParam,
   ChatCompletionMessageToolCall,
@@ -33,7 +34,7 @@ const ai = new OpenAI({
   ...defaultConfiguration,
   baseURL: `http://${VLLM_HOST}:8000/v1/`,
 })
-const TEMPERATURE = 0.7
+const TEMPERATURE = 0.4
 
 let modelId: string | null = null
 
@@ -41,7 +42,7 @@ async function fetchCurrentModel(): Promise<string | null> {
   try {
     const res = await fetch(`http://${VLLM_HOST}:8000/v1/models`)
     if (!res.ok) return null
-    const data = await res.json() as { data: { id: string }[] }
+    const data = (await res.json()) as { data: { id: string }[] }
     return data.data[0]?.id ?? null
   } catch {
     return null
@@ -156,9 +157,8 @@ function mapUserMessage(
   message: IAtlasUserMessage,
 ): ChatCompletionUserMessageParam {
   return {
-    content: message.name
-      ? `<${message.name}> ${message.content}`
-      : message.content,
+    name: message.name,
+    content: message.content,
     role: 'user',
   }
 }
@@ -288,9 +288,8 @@ async function doGetAIResponse(
       ? { type: 'function', function: { name: selectedToolName } }
       : undefined
 
-  const responseFormat = selectedToolName
-    ? { type: 'json_object' }
-    : undefined
+  const responseFormat: ChatCompletionCreateParams.ResponseFormat | undefined =
+    selectedToolName ? { type: 'json_object' } : undefined
 
   const startTime = new Date()
 
@@ -299,7 +298,7 @@ async function doGetAIResponse(
     model,
     tools: compatibleTools.length ? compatibleTools : undefined,
     user: userId,
-    temperature: 0.7,
+    temperature: TEMPERATURE,
     top_p: 0.8,
     presence_penalty: 2,
     max_tokens: maxTokens,
@@ -376,14 +375,34 @@ export const VllmCompatibility = {
   ): Promise<IAtlasMessage[]> => {
     const model = await getModelId()
     try {
-      return await doGetAIResponse(model, userId, assistant, messages, tools, transceiver, selectedToolName, tracer, maxTokens)
+      return await doGetAIResponse(
+        model,
+        userId,
+        assistant,
+        messages,
+        tools,
+        transceiver,
+        selectedToolName,
+        tracer,
+        maxTokens,
+      )
     } catch (err) {
       const newModel = await fetchCurrentModel()
       if (newModel && newModel !== model) {
         modelId = newModel
         await redis.del(CONTEXT_CACHE_KEY)
         console.log(`[vllm] model changed ${model} → ${newModel}, retrying`)
-        return doGetAIResponse(newModel, userId, assistant, messages, tools, transceiver, selectedToolName, tracer, maxTokens)
+        return doGetAIResponse(
+          newModel,
+          userId,
+          assistant,
+          messages,
+          tools,
+          transceiver,
+          selectedToolName,
+          tracer,
+          maxTokens,
+        )
       }
       throw err
     }

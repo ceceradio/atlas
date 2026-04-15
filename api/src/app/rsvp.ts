@@ -1,9 +1,11 @@
 import { checkJwt } from '@/app/authorize'
 import { postgres } from '@/data-source'
+import { AuditAction } from '@/entity/AuditLog'
 import { AuthProfile } from '@/entity/AuthProfile'
 import { AuthProviders } from '@/entity/AuthProviders'
 import { User } from '@/entity/User'
 import express from 'express'
+import { auditLog } from './auditLog'
 
 export const inviteApp = express()
 
@@ -24,6 +26,23 @@ inviteApp.post('/rsvp', checkJwt, async (request, response) => {
 
   user.inviteCode = ''
   await postgres.getRepository(User).save(user)
+
+  // Load organization for audit log (not included in getByInvite result)
+  const userWithOrg = await postgres.getRepository(User).findOne({
+    where: { uuid: user.uuid },
+    relations: { organization: true },
+  })
+  if (userWithOrg?.organization) {
+    await auditLog(
+      user.uuid,
+      userWithOrg.organization.uuid,
+      AuditAction.RSVP_COMPLETED,
+      'User',
+      user.uuid,
+      undefined,
+      { name: user.name, provider },
+    )
+  }
 
   return response.json(user)
 })
