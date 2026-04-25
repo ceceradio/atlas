@@ -3,6 +3,7 @@ import {
   useCreateChoreDefinitionMutation,
   useUpdateChoreDefinitionMutation,
   useDeleteChoreDefinitionMutation,
+  useSendVoteForChoreDefinitionMutation,
   useGetOrganizationQuery,
   useUpdateOrganizationSettingsMutation,
   useGetDiscordChannelsQuery,
@@ -63,6 +64,7 @@ function DefinitionRow({
   const [aliasesOpen, setAliasesOpen] = useState(false)
   const [updateDef, { isLoading: saving }] = useUpdateChoreDefinitionMutation()
   const [deleteDef, { isLoading: deleting }] = useDeleteChoreDefinitionMutation()
+  const [sendVote, { isLoading: sendingVote }] = useSendVoteForChoreDefinitionMutation()
   const { data: allDefs = [] } = useGetChoreDefinitionsQuery()
 
   // Canonicals only — exclude self and existing aliases
@@ -171,6 +173,26 @@ function DefinitionRow({
         {aliases.length > 0 && (
           <Badge colorScheme="gray" variant="subtle" fontSize="xs">{aliases.length} alias{aliases.length !== 1 ? 'es' : ''}</Badge>
         )}
+        {!isAlias && def.size === null && (() => {
+          if (!def.voteExpiresAt) {
+            return (
+              <Button
+                size="xs"
+                colorScheme="purple"
+                variant="outline"
+                isLoading={sendingVote}
+                onClick={() => sendVote(def.id)}
+                flexShrink={0}
+              >
+                Send Vote
+              </Button>
+            )
+          }
+          if (new Date(def.voteExpiresAt) > new Date()) {
+            return <Badge colorScheme="yellow" variant="subtle" fontSize="xs">voting active</Badge>
+          }
+          return <Badge colorScheme="gray" variant="subtle" fontSize="xs">awaiting tally</Badge>
+        })()}
         <IconButton
           aria-label="Edit"
           size="xs"

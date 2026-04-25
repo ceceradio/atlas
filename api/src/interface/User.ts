@@ -18,5 +18,7 @@ export type IUser = {
 export type IAPIUser = {
   uuid: string
   name: string
+  color?: string
+  discordUsername?: string | null
   created: Date
 }

@@ -1,6 +1,8 @@
-import { messageOrganizationQueue } from '@/queue/messageOrganization'
+import { choreDefinitionDiscoveryQueue } from '@/queue/choreDefinitionDiscovery'
+import { choreDefinitionVoteTallyQueue } from '@/queue/choreDefinitionVoteTally'
 import { choreMessageQueue } from '@/queue/choreMessage'
 import { attachJobEventBroadcaster } from '@/queue/jobEvents'
+import { messageOrganizationQueue } from '@/queue/messageOrganization'
 import { RawData, Server, ServerOptions, WebSocketServer } from 'ws'
 import { Antennae } from './Antennae'
 import { UserSocket } from './UserSocket'
@@ -9,7 +11,14 @@ import { joined } from './joined'
 import { update } from './update'
 
 export type AtlasSocketMessage<T> = {
-  type: 'update' | 'identify' | 'identified' | 'joined' | 'snapshot' | 'message' | 'jobEvent'
+  type:
+    | 'update'
+    | 'identify'
+    | 'identified'
+    | 'joined'
+    | 'snapshot'
+    | 'message'
+    | 'jobEvent'
 } & T
 export type Identify = {
   token: string
@@ -69,6 +78,22 @@ messageOrganizationQueue.process(async (job) => {
 attachJobEventBroadcaster(choreMessageQueue, 'chores', (orgId, event) => {
   routeToOrganization(orgId, event)
 })
+
+attachJobEventBroadcaster(
+  choreDefinitionDiscoveryQueue,
+  'choreDefinitionDiscovery',
+  (orgId, event) => {
+    routeToOrganization(orgId, event)
+  },
+)
+
+attachJobEventBroadcaster(
+  choreDefinitionVoteTallyQueue,
+  'choreDefinitionVoteTally',
+  (orgId, event) => {
+    routeToOrganization(orgId, event)
+  },
+)
 
 function requireIdentification<T>(
   userSocket: UserSocket,

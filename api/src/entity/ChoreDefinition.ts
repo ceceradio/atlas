@@ -48,11 +48,16 @@ export class ChoreDefinition {
   updatedAt: Date
 
   toApi() {
+    const VOTE_WINDOW_MS = 24 * 60 * 60 * 1000
+    const voteExpiresAt = this.discordVoteMessageId !== null && this.votePostedAt !== null
+      ? new Date(this.votePostedAt.getTime() + VOTE_WINDOW_MS).toISOString()
+      : null
     return {
       id: this.id,
       name: this.name,
       size: this.size,
       aliasOfId: this.aliasOfId ?? null,
+      voteExpiresAt,
       createdAt: this.createdAt,
     }
   }

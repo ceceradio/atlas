@@ -61,6 +61,8 @@ inviteManagementApp.get('/members', async (request, response) => {
     .map((u) => ({
       uuid: u.uuid,
       name: u.name,
+      color: u.color,
+      discordUsername: u.discordUsername,
       created: u.created,
     }))
 

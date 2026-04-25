@@ -1,5 +1,11 @@
 import { ChoreDefinition } from '@/entity/ChoreDefinition'
-import { Client, TextChannel } from 'discord.js'
+import {
+  Client,
+  Events,
+  Message,
+  PartialMessage,
+  TextChannel,
+} from 'discord.js'
 import { DataSource } from 'typeorm'
 import { AtlasPlugin } from '../AtlasPlugin'
 
@@ -12,16 +18,66 @@ export class ChoreDefinitionVoteMonitor implements AtlasPlugin {
   private dataSource: DataSource
   private channelId: string
 
+  private onMessageDelete = async (message: Message | PartialMessage) => {
+    if (message.channelId !== this.channelId) return
+    const repo = this.dataSource.getRepository(ChoreDefinition)
+    const def = await repo.findOne({
+      where: { discordVoteMessageId: message.id },
+    })
+    if (!def || def.size !== null || def.aliasOfId) return
+    console.log(
+      `ChoreDefinitionVoteMonitor: vote message deleted for unrated chore "${def.name}", removing definition`,
+    )
+    await repo.remove(def)
+  }
+
   constructor(client: Client, dataSource: DataSource, channelId: string) {
     this.client = client
     this.dataSource = dataSource
     this.channelId = channelId
+    this.client.on(Events.MessageDelete, this.onMessageDelete)
   }
 
-  async close() {}
+  async close() {
+    this.client.off(Events.MessageDelete, this.onMessageDelete)
+  }
+
+  async updateVoteMessage(
+    def: ChoreDefinition,
+    oldName: string,
+  ): Promise<void> {
+    if (!def.discordVoteMessageId) return
+    const channel = await this.client.channels
+      .fetch(this.channelId)
+      .catch(() => null)
+    if (!channel?.isTextBased()) return
+
+    try {
+      const msg = await (channel as TextChannel).messages.fetch(
+        def.discordVoteMessageId,
+      )
+      if (!msg.content.includes(`"${oldName}"`)) return
+      await msg.edit(msg.content.replace(`"${oldName}"`, `"${def.name}"`))
+      if (msg.thread) {
+        await msg.thread.setName(def.name).catch((e) => {
+          console.error(
+            `ChoreDefinitionVoteMonitor: failed to rename thread for "${def.name}"`,
+            e,
+          )
+        })
+      }
+    } catch (e) {
+      console.error(
+        `ChoreDefinitionVoteMonitor: failed to update vote message for "${def.name}"`,
+        e,
+      )
+    }
+  }
 
   async sendVoteMessages(definitions: ChoreDefinition[]): Promise<void> {
-    const channel = await this.client.channels.fetch(this.channelId).catch(() => null)
+    const channel = await this.client.channels
+      .fetch(this.channelId)
+      .catch(() => null)
     if (!channel?.isTextBased()) {
       console.error(
         'ChoreDefinitionVoteMonitor: channel not found or not text-based',
@@ -33,13 +89,22 @@ export class ChoreDefinitionVoteMonitor implements AtlasPlugin {
     const repo = this.dataSource.getRepository(ChoreDefinition)
 
     for (const def of definitions) {
-      if (def.discordVoteMessageId || def.size !== null) continue
+      if (def.discordVoteMessageId || def.size !== null || def.aliasOfId)
+        continue
 
       try {
         const sent = await (channel as TextChannel).send(voteMessage(def.name))
         def.discordVoteMessageId = sent.id
         def.votePostedAt = new Date()
         await repo.save(def)
+        await sent
+          .startThread({ name: def.name, autoArchiveDuration: 4320 })
+          .catch((e) => {
+            console.error(
+              `ChoreDefinitionVoteMonitor: failed to create thread for "${def.name}"`,
+              e,
+            )
+          })
       } catch (e) {
         console.error(
           `ChoreDefinitionVoteMonitor: failed to send vote message for "${def.name}"`,

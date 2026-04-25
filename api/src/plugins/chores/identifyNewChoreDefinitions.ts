@@ -1,9 +1,15 @@
 import { ITracer } from '@/atlas/ai-compat/langfuse/ITracer'
 import { embedQwen } from '@/atlas/ai-compat/openai/embed-qwen'
 import { Atlas } from '@/atlas/Atlas'
+import { postgres } from '@/data-source'
+import { ChoreDefinition } from '@/entity/ChoreDefinition'
 import { dedupe } from '@/lib/dedupe'
 import { magi } from '@/lib/magi'
-import { findClosestChoreDefinitions } from './choreDefinitionEmbeddings'
+import {
+  EmbeddingMatch,
+  findClosestChoreDefinitions,
+  findClosestUnratedChoreDefinitions,
+} from './choreDefinitionEmbeddings'
 import { IsNewChoreDefinitionTool } from './IsNewChoreDefinitionTool'
 import { normalizeChore } from './NormalizeChoreTool'
 import { magiRateChoreDifficulty } from './rateChoreDifficultySequential'
@@ -95,15 +101,6 @@ ${list || '(none yet)'}
 `
 }
 
-/**
- * Given a list of chore strings from choreSplitter, returns the subset that
- * do not match any existing ChoreDefinition.
- *
- * Pass 1 — exact case-insensitive match against all known definition names.
- * Pass 2 — normalize each surviving chore into a canonical form (strips qualifiers, generalizes rooms).
- * Pass 3 — exact case-insensitive match on the normalized form.
- * Pass 4 — magi-wrapped AI call for anything that survives all exact matches.
- */
 export async function identifyNewChoreDefinitions(
   chores: string[],
   tracer?: ITracer,
@@ -131,11 +128,79 @@ async function identifyNewChoreDefinition(
     return chore // fall back to original on error
   })
 
+  const { isNew, bestMatch } = await doIdentification(
+    { chore, normalizedForm },
+    true,
+    tracer,
+  )
+
+  if (!isNew) {
+    console.debug(
+      `identifyNewChoreDefinitions: "${chore}" is not a new chore definition (best match was "${
+        bestMatch?.name
+      }" with similarity ${bestMatch?.similarity.toFixed(4)}) — skipping`,
+    )
+    return false
+  }
+  // no exact matches and magi consensus is new — this is a new chore definition
+  // lets make sure it qualifies "as a chore" and not "not a chore"
+  const size = await magi(
+    async () => await magiRateChoreDifficulty(normalizedForm, tracer),
+    REQUIRED_AGREEMENTS,
+    TRIALS,
+  )
+  if (size === 'not a chore') {
+    console.debug(
+      `identifyNewChoreDefinitions: "${chore}" is not a chore according to magi — skipping`,
+    )
+    return false
+  }
+
+  const existing = await postgres.getRepository(ChoreDefinition).findOne({
+    where: { name: chore },
+  })
+  if (existing) {
+    console.debug(
+      `identifyNewChoreDefinitions: "${chore}" already exists in DB (size: ${
+        existing.size ?? 'unrated'
+      }) — skipping`,
+    )
+    return false
+  }
+
+  // make sure it doesnt match an existing unrated chore, too
+  const isNewUnrated = await doIdentification(
+    { chore, normalizedForm },
+    false,
+    tracer,
+  )
+  if (!isNewUnrated.isNew) {
+    console.debug(
+      `identifyNewChoreDefinitions: "${chore}" matches an existing unrated definition — skipping`,
+    )
+    return false
+  }
+
+  console.debug(
+    `identifyNewChoreDefinitions: "${chore}" is a new chore definition! (best match was "${
+      bestMatch?.name
+    }" with similarity ${bestMatch?.similarity?.toFixed(4)})`,
+  )
+  return true
+}
+
+async function doIdentification(
+  { chore, normalizedForm }: { chore: string; normalizedForm: string },
+  rated = true,
+  tracer?: ITracer,
+): Promise<{ isNew: boolean; bestMatch: EmbeddingMatch }> {
   // Pass 1: embedding + similarity search against existing definitions
   const embeddings = [await embedQwen(chore), await embedQwen(normalizedForm)]
   const matches = await Promise.all(
-    embeddings.map(
-      async (embedding) => await findClosestChoreDefinitions(embedding),
+    embeddings.map(async (embedding) =>
+      rated
+        ? await findClosestChoreDefinitions(embedding)
+        : await findClosestUnratedChoreDefinitions(embedding),
     ),
   )
   const flattenedMatches = matches
@@ -145,11 +210,7 @@ async function identifyNewChoreDefinition(
   // are any matches above the threshold?
   const bestMatch = flattenedMatches[0]
   if (bestMatch && bestMatch.similarity >= SIMILARITY_THRESHOLD) {
-    console.debug(
-      `identifyNewChoreDefinitions: "${chore}" matches "${bestMatch.name}" ` +
-        `(similarity ${bestMatch.similarity.toFixed(4)}) — skipping`,
-    )
-    return false
+    return { isNew: false, bestMatch }
   }
 
   // Pass 2: magi AI check against the best matching definitions
@@ -170,34 +231,13 @@ async function identifyNewChoreDefinition(
       REQUIRED_AGREEMENTS,
       TRIALS,
     )
-    if (!isNew) return false
+    return { isNew, bestMatch }
   } catch (err) {
     // magi failed to reach consensus — treat as not new to avoid noise
     console.warn(
       `identifyNewChoreDefinitions: no consensus for "${chore}"`,
       err,
     )
-    return false
+    return { isNew: false, bestMatch }
   }
-
-  // no exact matches and magi consensus is new — this is a new chore definition
-  // lets make sure it qualifies "as a chore" and not "not a chore"
-  const size = await magi(
-    async () => await magiRateChoreDifficulty(normalizedForm, tracer),
-    REQUIRED_AGREEMENTS,
-    TRIALS,
-  )
-  if (size === 'not a chore') {
-    console.debug(
-      `identifyNewChoreDefinitions: "${chore}" is not a chore according to magi — skipping`,
-    )
-    return false
-  }
-
-  console.debug(
-    `identifyNewChoreDefinitions: "${chore}" is a new chore definition! (best match was "${
-      bestMatch?.name
-    }" with similarity ${bestMatch?.similarity.toFixed(4)})`,
-  )
-  return true
 }

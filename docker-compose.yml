@@ -15,8 +15,14 @@ services:
       - .env.next
       - .env.vite
       - .env.api
+    environment:
+      - WATCHPACK_POLLING=true
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - .:/usr/src/app/
+      - atlas_node_modules:/usr/src/app/node_modules
+      - atlas_api_node_modules:/usr/src/app/api/node_modules
+      - atlas_vite_node_modules:/usr/src/app/vite/node_modules
   nginx:
     image: nginx:mainline-alpine
     restart: always
@@ -188,5 +194,8 @@ volumes:
     driver: local
   minio:
     driver: local
+  atlas_node_modules:
+  atlas_api_node_modules:
+  atlas_vite_node_modules:
 networks:
   atlas:

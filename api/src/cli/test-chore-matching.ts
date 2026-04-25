@@ -68,7 +68,7 @@ const TEST_CASES: TestCase[] = [
   { chore: 'wiped down the bathroom mirror', expectNew: true, note: 'mirror ≠ sink' },
   { chore: 'cleaned the bathroom exhaust fan', expectNew: true, note: 'not covered by any appliance/fixture def' },
   { chore: 'descaled the coffee maker', expectNew: true, note: 'specific appliance maintenance, not general cleaning' },
-  { chore: 'cleaned the range hood filter', expectNew: true, note: 'specific fixture, not stovetop' },
+  { chore: 'cleaned the range hood filter', expectNew: false, note: 'now a defined chore' },
 ]
 
 export default async function testChoreMatching(): Promise<string> {

@@ -116,6 +116,8 @@ export type PendingInvite = {
 export type OrgMember = {
   uuid: string
   name: string
+  color?: string
+  discordUsername?: string
   created: string
 }
 
@@ -207,8 +209,18 @@ export const atlasApi = createApi({
 
     // -- Auth ----------------------------------------------------------------
 
-    whoami: builder.query<{ uuid: string; name: string }, void>({
+    whoami: builder.query<{ uuid: string; name: string; color?: string; discordUsername?: string }, void>({
       query: () => '/whoami',
+      providesTags: [{ type: 'Whoami' as never }],
+    }),
+
+    updateUser: builder.mutation<{ uuid: string; name: string; color?: string; discordUsername?: string }, { color?: string; discordUsername?: string }>({
+      query: (patch) => ({
+        url: '/user',
+        method: 'PATCH',
+        body: patch,
+      }),
+      invalidatesTags: [{ type: 'Whoami' as never }, { type: 'Invites', id: 'MEMBERS' }],
     }),
 
     // -- Conversations -------------------------------------------------------
@@ -434,6 +446,14 @@ export const atlasApi = createApi({
       invalidatesTags: [{ type: 'ChoreDefinitions', id: 'LIST' }, { type: 'AuditLog', id: 'LIST' }],
     }),
 
+    sendVoteForChoreDefinition: builder.mutation<IChoreDefinition, string>({
+      query: (id) => ({
+        url: `/chore-definitions/${id}/send-vote`,
+        method: 'POST',
+      }),
+      invalidatesTags: [{ type: 'ChoreDefinitions', id: 'LIST' }],
+    }),
+
     // -- Audit Log -----------------------------------------------------------
 
     getAuditLog: builder.query<AuditLogResponse, AuditLogParams>({
@@ -452,6 +472,7 @@ export const atlasApi = createApi({
 
 export const {
   useWhoamiQuery,
+  useUpdateUserMutation,
   useGetMembersQuery,
   useGetInvitesQuery,
   useCreateInviteMutation,
@@ -480,5 +501,6 @@ export const {
   useCreateChoreDefinitionMutation,
   useUpdateChoreDefinitionMutation,
   useDeleteChoreDefinitionMutation,
+  useSendVoteForChoreDefinitionMutation,
   useGetAuditLogQuery,
 } = atlasApi

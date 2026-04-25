@@ -40,6 +40,12 @@ export class User implements IUser {
   @OneToMany(() => AuthProfile, (authProfile) => authProfile.user)
   authProfiles: Relation<AuthProfile>[]
 
+  @Column({ nullable: true })
+  color?: string
+
+  @Column({ type: 'text', nullable: true })
+  discordUsername?: string | null
+
   @Column()
   @Index()
   inviteCode: string
@@ -102,6 +108,8 @@ export class User implements IUser {
     return {
       uuid: this.uuid,
       name: this.name,
+      color: this.color,
+      discordUsername: this.discordUsername,
       created: this.created,
     }
   }

@@ -1,16 +1,17 @@
-import { choreDefinitionDiscoveryQueue } from '@/queue/choreDefinitionDiscovery'
 import { ITracer } from '@/atlas/ai-compat/langfuse/ITracer'
-import { rateChoreDifficultySequential } from './rateChoreDifficultySequential'
+import { choreDefinitionDiscoveryQueue } from '@/queue/choreDefinitionDiscovery'
 import { choreSplitter } from './choreSplitter'
 import { DatedRatedChores } from './ChoreTypes'
 import { dateSplitter } from './dateSplitter'
 import { isChoreMessage } from './isChoreMessage'
+import { rateChoreDifficultySequential } from './rateChoreDifficultySequential'
 
 const MAX_RETRIES = 4
 
 export async function processChoreMessage(
   message: string,
   date: string,
+  organizationId: string,
   tracer?: ITracer,
   _retries = 0,
 ): Promise<DatedRatedChores[] | null> {
@@ -33,8 +34,10 @@ export async function processChoreMessage(
 
       // Fire-and-forget: discover new chore definitions without blocking rating
       choreDefinitionDiscoveryQueue
-        .add({ chores: chores.chores })
-        .catch((err) => console.error('choreDefinitionDiscovery queue error:', err))
+        .add({ chores: chores.chores, organizationId })
+        .catch((err) =>
+          console.error('choreDefinitionDiscovery queue error:', err),
+        )
 
       const ratedChores = await rateChoreDifficultySequential(chores, tracer)
       console.log(ratedChores)
@@ -51,7 +54,7 @@ export async function processChoreMessage(
         }, retrying...`,
         err.message,
       )
-      return processChoreMessage(message, date, tracer, _retries + 1)
+      return processChoreMessage(message, date, organizationId, tracer, _retries + 1)
     }
     throw err
   }

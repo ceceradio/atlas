@@ -1,6 +1,11 @@
-import Queue from 'bull'
+import { Queue } from 'bull'
 
-export type JobEventStatus = 'waiting' | 'active' | 'completed' | 'failed' | 'stalled'
+export type JobEventStatus =
+  | 'waiting'
+  | 'active'
+  | 'completed'
+  | 'failed'
+  | 'stalled'
 
 export type JobEventPayload = {
   type: 'jobEvent'
@@ -13,11 +18,9 @@ export type JobEventPayload = {
 
 type BroadcastFn = (orgId: string, payload: JobEventPayload) => void
 
-export function attachJobEventBroadcaster<T extends { organizationId?: string }>(
-  queue: Queue<T>,
-  queueName: string,
-  broadcast: BroadcastFn,
-) {
+export function attachJobEventBroadcaster<
+  T extends { organizationId?: string },
+>(queue: Queue<T>, queueName: string, broadcast: BroadcastFn) {
   queue.on('waiting', async (jobId: string | number) => {
     const job = await queue.getJob(jobId)
     if (!job?.data.organizationId) return

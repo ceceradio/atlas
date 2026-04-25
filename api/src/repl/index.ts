@@ -41,6 +41,7 @@ async function initializeRepl() {
     return processChoreMessage(
       latest.content,
       latest.createdAt.toLocaleString(),
+      '',
     )
   }
 

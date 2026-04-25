@@ -6,7 +6,7 @@ import { LangfuseTracer } from '@/atlas/ai-compat/langfuse/LangfuseTracer'
 import { DatedRatedChores } from '@/plugins/chores/ChoreTypes'
 import { processChoreMessage } from '@/plugins/chores/processChoreMessage'
 import { filterReactions, extractCustomReactionMetadata } from '@/plugins/chores/reactionFilter'
-import { getAtlasPlugins } from '@/plugins'
+import { waitForAtlasPlugins } from '@/plugins'
 import Queue from 'bull'
 import { TextChannel } from 'discord.js'
 import { Repository } from 'typeorm'
@@ -24,9 +24,10 @@ export const choreMessageQueue = new Queue<ChoreMessageJobData>(
 )
 
 choreMessageQueue.process(async (job) => {
-  const { discordMessageId, discordChannelId } = job.data
+  const { discordMessageId, discordChannelId, organizationId = '' } = job.data
 
-  const client = getAtlasPlugins().discord.client
+  const plugins = await waitForAtlasPlugins()
+  const client = plugins.discord.client
   const channel = await client.channels.fetch(discordChannelId)
   if (!channel?.isTextBased()) throw new Error(`Channel ${discordChannelId} is not text-based`)
 
@@ -37,7 +38,7 @@ choreMessageQueue.process(async (job) => {
     tags: ['chores'],
   })
 
-  const result = await processChoreMessage(content, createdAt.toISOString(), tracer)
+  const result = await processChoreMessage(content, createdAt.toISOString(), organizationId, tracer)
   const reactions = filterReactions(discordMessage.reactions)
   const reactionMetadata = extractCustomReactionMetadata(discordMessage.reactions)
 

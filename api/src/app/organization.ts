@@ -45,7 +45,7 @@ organizationApp.patch('/organization', async (request, response) => {
   await auditLog(user.uuid, orgId, AuditAction.ORGANIZATION_SETTINGS_UPDATED, 'Organization', orgId, beforeSettings, settings)
 
   if (nextChoresChannelId && nextChoresChannelId !== prevChoresChannelId) {
-    getAtlasPlugins().initChoreMonitor(db, nextChoresChannelId)
+    getAtlasPlugins().initChoreMonitor(db, nextChoresChannelId, orgId)
   } else if (!nextChoresChannelId && prevChoresChannelId) {
     await getAtlasPlugins().choreMonitor?.close()
     getAtlasPlugins().choreMonitor = undefined

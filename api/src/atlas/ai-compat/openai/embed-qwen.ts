@@ -1,7 +1,9 @@
 import OpenAI from 'openai'
 
+const VLLM_HOST = process.env.VLLM_HOST || 'host.docker.internal'
+
 const client = new OpenAI({
-  baseURL: 'http://localhost:8002/v1',
+  baseURL: `http://${VLLM_HOST}:8002/v1`,
   apiKey: 'none',
 })
 

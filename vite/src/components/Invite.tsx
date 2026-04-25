@@ -8,7 +8,9 @@ import {
   VStack,
 } from '@chakra-ui/react'
 import { useState } from 'react'
+import { useAuth0 } from '@auth0/auth0-react'
 import { useCreateInviteMutation, useGetInvitesQuery, useGetMembersQuery, useRevokeInviteMutation, OrgMember, PendingInvite } from '@/store/atlasApi'
+import { GemIcon } from './GemIcon'
 
 function inviteUrl(inviteCode: string) {
   return `${window.location.origin}/rsvp?inviteCode=${inviteCode}`
@@ -74,12 +76,20 @@ function MembersPanel({ members }: { members: OrgMember[] }) {
         {members.map((member, i) => (
           <Box key={member.uuid}>
             {i > 0 && <Divider />}
-            <Box paddingY="0.5rem">
-              <Text fontSize="sm" fontWeight="medium">{member.name}</Text>
-              <Text fontSize="xs" color="gray.500">
-                Joined {new Date(member.created).toLocaleDateString()}
-              </Text>
-            </Box>
+            <Flex paddingY="0.5rem" alignItems="center" gap="0.5rem">
+              <GemIcon color={member.color || '#b0bec5'} />
+              <Box>
+                <Text fontSize="sm">
+                  <Text as="span" fontWeight="medium">{member.name}</Text>
+                  {member.discordUsername && (
+                    <Text as="span" color="gray.500"> ({member.discordUsername})</Text>
+                  )}
+                </Text>
+                <Text fontSize="xs" color="gray.500">
+                  Joined {new Date(member.created).toLocaleDateString()}
+                </Text>
+              </Box>
+            </Flex>
           </Box>
         ))}
       </VStack>
@@ -93,6 +103,7 @@ export function InvitePanel() {
   const { data: invites = [] } = useGetInvitesQuery()
   const { data: members = [] } = useGetMembersQuery()
   const [createInvite, { isLoading }] = useCreateInviteMutation()
+  const { logout } = useAuth0()
 
   const handleCreate = async () => {
     const trimmed = name.trim()
@@ -103,8 +114,14 @@ export function InvitePanel() {
   }
 
   return (
-    <Flex padding="1.5rem" gap="1.5rem" alignItems="flex-start">
-      <VStack alignItems="stretch" gap="1.5rem" flex="1" maxWidth="520px">
+    <Flex padding="1.5rem" gap="1.5rem" alignItems="flex-start" flexDirection="column">
+      <Flex width="100%" justifyContent="flex-end">
+        <Button size="sm" variant="ghost" colorScheme="gray" onClick={() => logout({ logoutParams: { returnTo: 'https://chocolate.local:8443' } })}>
+          Log out
+        </Button>
+      </Flex>
+      <Flex gap="1.5rem" alignItems="flex-start" width="100%">
+        <VStack alignItems="stretch" gap="1.5rem" flex="1" maxWidth="520px">
         <Box {...paper}>
           <Text fontSize="lg" fontWeight="semibold" marginBottom="0.75rem">Invite someone</Text>
           <Box
@@ -160,13 +177,14 @@ export function InvitePanel() {
             ))}
           </Box>
         )}
-      </VStack>
+        </VStack>
 
-      {members.length > 0 && (
-        <Box flex="1">
-          <MembersPanel members={members} />
-        </Box>
-      )}
+        {members.length > 0 && (
+          <Box flex="1">
+            <MembersPanel members={members} />
+          </Box>
+        )}
+      </Flex>
     </Flex>
   )
 }

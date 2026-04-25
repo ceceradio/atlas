@@ -20,12 +20,17 @@ export class AtlasPlugins {
       */
   }
 
-  initChoreMonitor(dataSource: DataSource, channelId: string) {
+  initChoreMonitor(
+    dataSource: DataSource,
+    channelId: string,
+    organizationId: string,
+  ) {
     this.choreMonitor?.close()
     this.choreMonitor = new ChoreChannelMonitor(
       this.discord.client,
       dataSource,
       channelId,
+      organizationId,
     )
   }
 
@@ -49,10 +54,17 @@ export class AtlasPlugins {
 let instance: AtlasPlugins
 
 export function getAtlasPlugins(): AtlasPlugins {
+  initAtlasPlugins()
+  return instance
+}
+
+export async function waitForAtlasPlugins(): Promise<AtlasPlugins> {
+  await instance.discord.ready
   return instance
 }
 
 export function initAtlasPlugins(): AtlasPlugins {
+  if (instance) return instance
   instance = new AtlasPlugins()
   return instance
 }

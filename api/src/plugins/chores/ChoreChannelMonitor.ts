@@ -11,6 +11,7 @@ export class ChoreChannelMonitor implements AtlasPlugin {
   private client: Client
   private dataSource: DataSource
   private channelId: string
+  private organizationId: string
 
   private onMessageCreate = async (message: Message<boolean>) => {
     if (message.channelId !== this.channelId) return
@@ -33,10 +34,11 @@ export class ChoreChannelMonitor implements AtlasPlugin {
     await this.handleUpdate(newMessage as Message<boolean>)
   }
 
-  constructor(client: Client, dataSource: DataSource, channelId: string) {
+  constructor(client: Client, dataSource: DataSource, channelId: string, organizationId: string) {
     this.client = client
     this.dataSource = dataSource
     this.channelId = channelId
+    this.organizationId = organizationId
     this.client.on(Events.MessageCreate, this.onMessageCreate)
     this.client.on(Events.MessageUpdate, this.onMessageUpdate)
   }
@@ -48,7 +50,7 @@ export class ChoreChannelMonitor implements AtlasPlugin {
 
   private async handleCreate(message: Message<boolean>) {
     const tracer = new LangfuseTracer('choreMessage', message.author.id, message.id, { tags: ['chores'] })
-    const result = await processChoreMessage(message.content, message.createdAt.toISOString(), tracer)
+    const result = await processChoreMessage(message.content, message.createdAt.toISOString(), this.organizationId, tracer)
     if (!result) return
     await this.saveChoreMessage(message, result, null)
   }
@@ -58,7 +60,7 @@ export class ChoreChannelMonitor implements AtlasPlugin {
     const existing = await choreMessageRepo.findOne({ where: { discordMessageId: message.id } })
 
     const tracer = new LangfuseTracer('choreMessage', message.author.id, message.id, { tags: ['chores', 'edit'] })
-    const result = await processChoreMessage(message.content, message.createdAt.toISOString(), tracer)
+    const result = await processChoreMessage(message.content, message.createdAt.toISOString(), this.organizationId, tracer)
 
     if (!result) {
       if (existing) await choreMessageRepo.remove(existing)

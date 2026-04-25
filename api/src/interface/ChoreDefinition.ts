@@ -5,5 +5,6 @@ export type IChoreDefinition = {
   name: string
   size: ChoreDifficulty | null
   aliasOfId: string | null
+  voteExpiresAt: string | null
   createdAt: string
 }

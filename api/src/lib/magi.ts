@@ -16,11 +16,11 @@ export class MagiError extends Error {
   ) {
     const entries = [...tally.entries()]
       .map(([v, n]) => `${JSON.stringify(v)}: ${n}`)
-      .join(', ');
+      .join(', ')
     super(
       `Magi: no consensus after ${trials} trials (needed ${requiredAgreements}). Tally: { ${entries} }`,
-    );
-    this.name = 'MagiError';
+    )
+    this.name = 'MagiError'
   }
 }
 
@@ -35,40 +35,40 @@ export async function magi<T extends MagiValue>(
   requiredAgreements: number,
   trials: number,
 ): Promise<T> {
-  if (requiredAgreements < 1) throw new RangeError('requiredAgreements must be ≥ 1');
-  if (trials < requiredAgreements) throw new RangeError('trials must be ≥ requiredAgreements');
+  if (requiredAgreements < 1) throw new RangeError('requiredAgreements must be ≥ 1')
+  if (trials < requiredAgreements) throw new RangeError('trials must be ≥ requiredAgreements')
 
-  const tally = new Map<MagiValue, number>();
+  const tally = new Map<MagiValue, number>()
 
   for (let i = 0; i < trials; i++) {
-    const result = await fn();
-    const count = (tally.get(result) ?? 0) + 1;
-    tally.set(result, count);
+    const result = await fn()
+    const count = (tally.get(result) ?? 0) + 1
+    tally.set(result, count)
 
     // Early exit: no remaining trials can catch up to this value
     if (count >= requiredAgreements) {
-      const remaining = trials - i - 1;
+      const remaining = trials - i - 1
       const canCatchUp = ([...tally.entries()] as [MagiValue, number][]).some(
         ([v, n]) => v !== result && n + remaining >= count,
-      );
-      if (!canCatchUp) return result as T;
+      )
+      if (!canCatchUp) return result as T
     }
   }
 
   // All trials exhausted — find the winner, if any
-  let bestValue: MagiValue | undefined;
-  let bestCount = 0;
+  let bestValue: MagiValue | undefined
+  let bestCount = 0
 
   for (const [value, count] of tally) {
     if (count >= requiredAgreements && count > bestCount) {
-      bestValue = value;
-      bestCount = count;
+      bestValue = value
+      bestCount = count
     }
   }
 
-  if (bestValue === undefined) throw new MagiError(trials, requiredAgreements, tally);
+  if (bestValue === undefined) throw new MagiError(trials, requiredAgreements, tally)
 
-  return bestValue as T;
+  return bestValue as T
 }
 
 /**
@@ -95,6 +95,6 @@ export class MagiService {
       fn,
       overrides?.requiredAgreements ?? this.defaults.requiredAgreements,
       overrides?.trials ?? this.defaults.trials,
-    );
+    )
   }
 }

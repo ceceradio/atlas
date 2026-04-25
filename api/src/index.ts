@@ -17,7 +17,7 @@ getDataSource().then(async (_db) => {
   const orgs = await Organization.list(db)
   for (const org of orgs) {
     const choresChannelId = org.settings?.discord?.choresChannelId
-    if (choresChannelId) atlasPlugins.initChoreMonitor(db, choresChannelId)
+    if (choresChannelId) atlasPlugins.initChoreMonitor(db, choresChannelId, org.uuid)
 
     const voteChannelId = org.settings?.discord?.choreDefinitionsChannelId
     if (voteChannelId) atlasPlugins.initChoreDefinitionVoteMonitor(db, voteChannelId)

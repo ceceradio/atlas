@@ -1,8 +1,14 @@
 import { ITracer } from '@/atlas/ai-compat/langfuse/ITracer'
+import { embedQwen } from '@/atlas/ai-compat/openai/embed-qwen'
 import { Atlas } from '@/atlas/Atlas'
 import { postgres } from '@/data-source'
 import { ChoreDefinition } from '@/entity/ChoreDefinition'
 import { magi } from '@/lib/magi'
+import { selectMultipleFromList } from '@/subfunctions/selectMultipleFromList'
+import {
+  EmbeddingMatch,
+  findClosestSizedCanonicalChoreDefinitions,
+} from './choreDefinitionEmbeddings'
 import {
   ChoreDifficulty,
   DatedChores,
@@ -30,7 +36,9 @@ const SIZE_HEADINGS: Record<ChoreDifficulty, string> = {
   'extra large': 'Extra large',
 }
 
-async function buildSystemMessage(): Promise<string> {
+async function buildSystemMessage(
+  closestMatches?: EmbeddingMatch[],
+): Promise<string> {
   const definitions = await postgres
     .getRepository(ChoreDefinition)
     .createQueryBuilder('def')
@@ -65,29 +73,21 @@ Some rooms are bigger than others, so some rooms are medium difficulty to vacuum
 
 ${exampleSections}
 
+# Closest match
 
-# Tool call examples
+Below is a list of existing chore definitions that are closest to the input chore based on their embeddings. Use this information as context, but don't rely on it too much — the existing chore with the closest embedding might not actually be that similar to the input chore, and there might be important differences that affect the difficulty rating.
 
-Input: "cleaned the stovetop"
-Output: "small"
-
-Input: "did the laundry for the green bathroom"
-Output: "medium"
-
-Input: "took out the trash"
-Output: "small"
-
-Input: "reloaded small dishwasher"
-Output: "small"
-
-Input: "loaded and ran dishwasher"
-Output: "medium"
-
-Input: "cooked dinner"
-Output: "large"
-
-Input: "unloaded the dishwasher"
-Output: "small"
+${
+  closestMatches
+    ? closestMatches
+        .map((closestMatch) =>
+          closestMatch
+            ? `The closest existing chore definition to the input chore is "${closestMatch.name}", which is rated as ${closestMatch.size} difficulty.`
+            : '',
+        )
+        .join('\n')
+    : ''
+}
 
 `
 }
@@ -113,7 +113,25 @@ export async function magiRateChoreDifficulty(
   chore: string,
   tracer?: ITracer,
 ): Promise<ChoreDifficulty> {
-  const systemMessage = await buildSystemMessage()
+  const embedding = await embedQwen(chore)
+  const closestMatches = await findClosestSizedCanonicalChoreDefinitions(
+    embedding,
+    3,
+  )
+  // select the closest match for real
+  const closestMatchNames = await selectMultipleFromList(
+    closestMatches.map((m) => m.name),
+    chore,
+    'Pick the items from the list whose names are closest/most similar to the input item.',
+    tracer,
+  )
+  const closestMatchesFiltered = closestMatches.filter((m) =>
+    closestMatchNames.includes(m.name),
+  )
+
+  const systemMessage = await buildSystemMessage(
+    closestMatchesFiltered.length > 0 ? closestMatchesFiltered : undefined,
+  )
   const difficulty = await magi(
     async () => {
       const result = await Atlas.processToolRequest(

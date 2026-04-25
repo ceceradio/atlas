@@ -26,6 +26,7 @@ const CHANNEL_ID = '1071516705806893187' // @todo
 
 export class AtlasDiscord implements AtlasPlugin {
   client: Client
+  ready: Promise<void>
   listeners: ((message: Message<boolean>) => Promise<void>)[]
   constructor() {
     // Create a new client instance
@@ -41,6 +42,7 @@ export class AtlasDiscord implements AtlasPlugin {
         GatewayIntentBits.DirectMessages,
       ],
     })
+    this.ready = new Promise((resolve) => this.client.once(Events.ClientReady, () => resolve()))
     this.attachEventsToClient()
     this.listeners = []
   }

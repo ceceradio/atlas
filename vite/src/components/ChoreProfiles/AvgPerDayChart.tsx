@@ -10,20 +10,21 @@ import {
   LabelList,
   Cell,
 } from 'recharts'
-import { PERSON_COLORS } from './constants'
+import { getPersonColor } from './constants'
 
 interface Props {
   profiles: ChoreProfile[]
   weighted?: boolean
+  memberColors?: Record<string, string>
 }
 
-export function AvgPerDayChart({ profiles, weighted = false }: Props) {
+export function AvgPerDayChart({ profiles, weighted = false, memberColors = {} }: Props) {
   const data = [...profiles]
     .sort((a, b) => (weighted ? b.weightedAveragePerDay - a.weightedAveragePerDay : b.averagePerDay - a.averagePerDay))
-    .map((p, i) => ({
+    .map((p) => ({
       name: p.discordAuthorName,
       value: weighted ? p.weightedAveragePerDay : p.averagePerDay,
-      fill: PERSON_COLORS[i % PERSON_COLORS.length],
+      fill: memberColors[p.discordAuthorName] ?? getPersonColor(p.discordAuthorName),
     }))
 
   return (

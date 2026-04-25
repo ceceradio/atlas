@@ -1,6 +1,7 @@
 import { postgres } from '@/data-source'
 import { AuthProfile } from '@/entity/AuthProfile'
 import { AuthProviders } from '@/entity/AuthProviders'
+import { User } from '@/entity/User'
 import express from 'express'
 import { auth } from 'express-oauth2-jwt-bearer'
 
@@ -33,5 +34,21 @@ export const authorize: express.Handler = (request, response, next) => {
 export const authApp = express()
 
 authApp.get('/whoami', authorize, (request, response) => {
-  return response.json(response.locals.user)
+  const user: User = response.locals.user
+  return response.json(user.toApi())
+})
+
+authApp.patch('/user', authorize, async (request, response, next) => {
+  try {
+    const user: User = response.locals.user
+    const { color, discordUsername } = request.body as { color?: string; discordUsername?: string }
+    if (color !== undefined) user.color = color || undefined
+    if (discordUsername !== undefined) user.discordUsername = discordUsername || null
+    if (color !== undefined || discordUsername !== undefined) {
+      await postgres.getRepository(User).save(user)
+    }
+    return response.json(user.toApi())
+  } catch (e) {
+    next(e)
+  }
 })

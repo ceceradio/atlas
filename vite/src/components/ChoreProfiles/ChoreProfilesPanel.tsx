@@ -1,4 +1,4 @@
-import { useGetChoreProfilesQuery } from '@/store/atlasApi'
+import { useGetChoreProfilesQuery, useGetMembersQuery } from '@/store/atlasApi'
 import { Box, Flex, HStack, Input, Spinner, Text, VStack } from '@chakra-ui/react'
 import { Button } from '@chakra-ui/react'
 import { useChoreDateRange } from '@/helpers/useChoreDateRange'
@@ -13,6 +13,13 @@ export function ChoreProfilesPanel() {
     from: from || undefined,
     to: to || undefined,
   })
+  const { data: members = [] } = useGetMembersQuery()
+
+  const memberColorByDiscord = Object.fromEntries(
+    members
+      .filter((m) => m.discordUsername && m.color)
+      .map((m) => [m.discordUsername!, m.color!])
+  )
 
   const profiles = data?.profiles ?? []
 
@@ -64,13 +71,13 @@ export function ChoreProfilesPanel() {
         <>
           <Flex gap="1.5rem" flexWrap="wrap">
             <Box flex="1" minWidth="280px">
-              <AvgPerDayChart profiles={profiles} />
+              <AvgPerDayChart profiles={profiles} memberColors={memberColorByDiscord} />
             </Box>
             <Box flex="1" minWidth="280px">
-              <AvgPerDayChart profiles={profiles} weighted />
+              <AvgPerDayChart profiles={profiles} weighted memberColors={memberColorByDiscord} />
             </Box>
             <Box flex="1" minWidth="280px">
-              <SizeAdjustedPieChart profiles={profiles} />
+              <SizeAdjustedPieChart profiles={profiles} memberColors={memberColorByDiscord} />
             </Box>
           </Flex>
 

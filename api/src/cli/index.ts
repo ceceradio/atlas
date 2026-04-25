@@ -8,13 +8,14 @@ import seedChoreDefinitions from '@/cli/seed-chore-definitions'
 import backfillChoreEmbeddings from '@/cli/backfill-chore-embeddings'
 import testChoreMatching from '@/cli/test-chore-matching'
 import testNewChore from '@/cli/test-new-chore'
+import reprocessFailedChoreJobs from '@/cli/reprocess-failed-chore-jobs'
 import { getDataSource } from '@/data-source'
 import minimist from 'minimist'
 import { DataSource } from 'typeorm'
 import respond from './respond'
 import responseEvaluation from './response-evaluation'
 import retitleConversation from './retitle-conversation'
-export { listChoreDefinitions, listUsers, registerOrganization, registerUser, retitleConversation, seedChoreDefinitions, backfillChoreEmbeddings, testChoreMatching, testNewChore }
+export { listChoreDefinitions, listUsers, registerOrganization, registerUser, retitleConversation, seedChoreDefinitions, backfillChoreEmbeddings, testChoreMatching, testNewChore, reprocessFailedChoreJobs }
 
 if (require.main === module) {
   const argv = minimist(process.argv.slice(2))
@@ -46,6 +47,8 @@ if (require.main === module) {
       } else if (command === 'testNewChore') {
         const choreString = argv._.slice(1).join(' ')
         return await testNewChore(choreString)
+      } else if (command === 'reprocessFailedChoreJobs') {
+        return await reprocessFailedChoreJobs()
       }
     })
     .then(console.info)

@@ -7,11 +7,35 @@ export const DIFFICULTY_COLORS: Record<string, string> = {
   'extra large': '#B794F4',
 }
 
-// Distinct hues for per-person pie slices
+// Distinct hues for per-person coloring — spread across the spectrum
 export const PERSON_COLORS = [
-  '#4299E1', '#ED8936', '#48BB78', '#ECC94B',
-  '#9F7AEA', '#F687B3', '#38B2AC', '#FC8181',
+  '#4299E1', // blue
+  '#ED8936', // orange
+  '#48BB78', // green
+  '#ECC94B', // yellow
+  '#9F7AEA', // purple
+  '#38B2AC', // teal
+  '#FC8181', // red
+  '#667EEA', // indigo
+  '#F6AD55', // light orange
+  '#68D391', // light green
+  '#76E4F7', // cyan
+  '#B794F4', // lavender
 ]
+
+// FNV-1a — much better distribution than a polynomial hash for short strings
+function hashName(name: string): number {
+  let h = 2166136261 >>> 0
+  for (let i = 0; i < name.length; i++) {
+    h ^= name.charCodeAt(i)
+    h = Math.imul(h, 16777619) >>> 0
+  }
+  return h
+}
+
+export function getPersonColor(name: string): string {
+  return PERSON_COLORS[hashName(name) % PERSON_COLORS.length]
+}
 
 export const EXCLUDED_REACTIONS = new Set([
   '❤️', '❤', '💜', '💕', '🩷', '🤍', '🖤', '💙', '💛', '💚', '🧡',

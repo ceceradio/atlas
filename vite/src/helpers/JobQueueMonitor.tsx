@@ -42,9 +42,12 @@ export function JobQueueMonitor() {
       result: event.result,
     }))
 
-    // Invalidate chore cache when a chores job finishes
-    if (event.queue === 'chores' && (event.status === 'completed' || event.status === 'failed')) {
+    const done = event.status === 'completed' || event.status === 'failed'
+    if (done && event.queue === 'chores') {
       dispatch(atlasApi.util.invalidateTags(['Chores', 'ChoreMessages']))
+    }
+    if (done && (event.queue === 'choreDefinitionDiscovery' || event.queue === 'choreDefinitionVoteTally')) {
+      dispatch(atlasApi.util.invalidateTags(['ChoreDefinitions']))
     }
   }, [lastJsonMessage, dispatch])
 

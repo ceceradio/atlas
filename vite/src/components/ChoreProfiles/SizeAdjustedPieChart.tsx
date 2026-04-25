@@ -7,19 +7,20 @@ import {
   Cell,
   Tooltip,
 } from 'recharts'
-import { PERSON_COLORS } from './constants'
+import { getPersonColor } from './constants'
 
 interface Props {
   profiles: ChoreProfile[]
+  memberColors?: Record<string, string>
 }
 
-export function SizeAdjustedPieChart({ profiles }: Props) {
+export function SizeAdjustedPieChart({ profiles, memberColors = {} }: Props) {
   const data = profiles
     .filter((p) => p.sizeAdjustedPercentOfTotal > 0)
-    .map((p, i) => ({
+    .map((p) => ({
       name: p.discordAuthorName,
       value: p.sizeAdjustedPercentOfTotal,
-      fill: PERSON_COLORS[i % PERSON_COLORS.length],
+      fill: memberColors[p.discordAuthorName] ?? getPersonColor(p.discordAuthorName),
     }))
 
   return (

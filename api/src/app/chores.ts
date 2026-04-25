@@ -6,7 +6,10 @@ import { ChoreReaction } from '@/entity/ChoreReaction'
 import { embedQwen } from '@/atlas/ai-compat/openai/embed-qwen'
 import { setChoreDefinitionEmbedding } from '@/plugins/chores/choreDefinitionEmbeddings'
 import { ChoreDifficulty } from '@/plugins/chores/ChoreTypes'
+import { getAtlasPlugins } from '@/plugins'
 import { choreMessageQueue, ChoreMessageJobData } from '@/queue/choreMessage'
+import { choreDefinitionDiscoveryQueue } from '@/queue/choreDefinitionDiscovery'
+import { choreDefinitionVoteTallyQueue } from '@/queue/choreDefinitionVoteTally'
 import express from 'express'
 import { auditLog } from './auditLog'
 import { authorize } from './authorize'
@@ -425,22 +428,20 @@ choresApp.post('/chore-message/:id/reprocess', withTransaction(async (request, r
 }))
 
 choresApp.get('/chore-jobs', async (_request, response) => {
-  const [waiting, active] = await Promise.all([
-    choreMessageQueue.getWaiting(),
-    choreMessageQueue.getActive(),
-  ])
+  const queues = [
+    [choreMessageQueue, 'chores'],
+    [choreDefinitionDiscoveryQueue, 'choreDefinitionDiscovery'],
+    [choreDefinitionVoteTallyQueue, 'choreDefinitionVoteTally'],
+  ] as const
 
-  const toEvent = (status: string) => (job: { id: string | number }) => ({
-    jobId: String(job.id),
-    queue: 'chores',
-    status,
-    failedReason: null,
-  })
+  const results = await Promise.all(
+    queues.flatMap(([queue, name]) => [
+      queue.getWaiting().then((jobs) => jobs.map((job) => ({ jobId: String(job.id), queue: name, status: 'waiting' as const, failedReason: null }))),
+      queue.getActive().then((jobs) => jobs.map((job) => ({ jobId: String(job.id), queue: name, status: 'active' as const, failedReason: null }))),
+    ]),
+  )
 
-  return response.json([
-    ...waiting.map(toEvent('waiting')),
-    ...active.map(toEvent('active')),
-  ])
+  return response.json(results.flat())
 })
 
 choresApp.get('/chore-jobs/:jobId', async (request, response) => {
@@ -581,6 +582,13 @@ choresApp.patch('/chore-definitions/:id', async (request, response) => {
     embedQwen(def.name)
       .then((embedding) => setChoreDefinitionEmbedding(def.id, embedding))
       .catch((err) => console.error(`Failed to re-embed chore definition "${def.name}":`, err))
+
+    const voteMonitor = getAtlasPlugins()?.choreDefinitionVoteMonitor
+    if (voteMonitor) {
+      voteMonitor
+        .updateVoteMessage(def, before.name)
+        .catch((err) => console.error('Failed to update Discord vote message:', err))
+    }
   }
 
   return response.json(def.toApi())
@@ -599,4 +607,23 @@ choresApp.delete('/chore-definitions/:id', async (request, response) => {
   await auditLog(user.uuid, user.organization.uuid, AuditAction.CHORE_DEFINITION_DELETED, 'ChoreDefinition', id, before)
 
   return response.sendStatus(204)
+})
+
+choresApp.post('/chore-definitions/:id/send-vote', async (request, response) => {
+  const { id } = request.params
+  const repo = postgres.getRepository(ChoreDefinition)
+  const def = await repo.findOne({ where: { id } })
+  if (!def) return response.sendStatus(404)
+
+  if (def.size !== null) return response.status(400).json({ error: 'Definition is already rated' })
+  if (def.aliasOfId !== null) return response.status(400).json({ error: 'Aliases cannot be voted on' })
+  if (def.discordVoteMessageId !== null) return response.status(409).json({ error: 'A vote is already active for this definition' })
+
+  const voteMonitor = getAtlasPlugins()?.choreDefinitionVoteMonitor
+  if (!voteMonitor) return response.status(503).json({ error: 'Discord vote monitor is not available' })
+
+  await voteMonitor.sendVoteMessages([def])
+
+  const updated = await repo.findOne({ where: { id } })
+  return response.json((updated ?? def).toApi())
 })

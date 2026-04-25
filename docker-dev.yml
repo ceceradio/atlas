@@ -1,6 +1,0 @@
-services:
-  atlas:
-    volumes:
-      - .:/usr/src/app/
-    environment:
-      - WATCHPACK_POLLING=true

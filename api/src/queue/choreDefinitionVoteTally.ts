@@ -1,8 +1,8 @@
 import { getDataSource } from '@/data-source'
 import { ChoreDefinition } from '@/entity/ChoreDefinition'
 import { Organization } from '@/entity/Organization'
+import { getAtlasPlugins, waitForAtlasPlugins } from '@/plugins'
 import { ChoreDifficulty } from '@/plugins/chores/ChoreTypes'
-import { getAtlasPlugins } from '@/plugins'
 import Queue from 'bull'
 import { TextChannel } from 'discord.js'
 import { redisConfig } from './redis'
@@ -18,7 +18,13 @@ const EMOJI_TO_SIZE: Record<string, ChoreDifficulty> = {
 }
 
 // Ordered smallest → largest for tie-breaking
-const SIZE_ORDER: ChoreDifficulty[] = ['not a chore', 'small', 'medium', 'large', 'extra large']
+const SIZE_ORDER: ChoreDifficulty[] = [
+  'not a chore',
+  'small',
+  'medium',
+  'large',
+  'extra large',
+]
 
 export const choreDefinitionVoteTallyQueue = new Queue(
   'choreDefinitionVoteTally',
@@ -51,10 +57,12 @@ async function tallyExpiredVotes(): Promise<void> {
     .find(Boolean)
 
   if (!channelId) {
-    console.warn('choreDefinitionVoteTally: no choreDefinitionsChannelId configured')
+    console.warn(
+      'choreDefinitionVoteTally: no choreDefinitionsChannelId configured',
+    )
     return
   }
-
+  await waitForAtlasPlugins()
   const client = getAtlasPlugins()?.discord?.client
   if (!client) {
     console.warn('choreDefinitionVoteTally: Discord client not available')
@@ -63,7 +71,10 @@ async function tallyExpiredVotes(): Promise<void> {
 
   const channel = await client.channels.fetch(channelId).catch(() => null)
   if (!channel?.isTextBased()) {
-    console.warn('choreDefinitionVoteTally: channel not found or not text-based', channelId)
+    console.warn(
+      'choreDefinitionVoteTally: channel not found or not text-based',
+      channelId,
+    )
     return
   }
 
@@ -71,7 +82,9 @@ async function tallyExpiredVotes(): Promise<void> {
 
   for (const def of pending) {
     try {
-      const message = await (channel as TextChannel).messages.fetch(def.discordVoteMessageId!)
+      const message = await (channel as TextChannel).messages.fetch(
+        def.discordVoteMessageId!,
+      )
 
       // Count reactions, subtracting the bot's own if present
       const voteCounts = new Map<ChoreDifficulty, number>()
@@ -88,15 +101,23 @@ async function tallyExpiredVotes(): Promise<void> {
 
       if (voteCounts.size === 0) {
         await repo.save(def)
-        await message.edit(`⏰ "${def.name}" — no votes after 24 hours, left unassigned`).catch(() => {})
+        await message
+          .edit(`⏰ "${def.name}" — no votes after 24 hours, left unassigned`)
+          .catch(() => {})
         continue
       }
 
       // Most votes wins; ties broken by picking the smaller size
-      const winner = [...voteCounts.entries()].reduce<[ChoreDifficulty, number]>(
+      const winner = [...voteCounts.entries()].reduce<
+        [ChoreDifficulty, number]
+      >(
         (best, [size, count]) => {
           if (count > best[1]) return [size, count]
-          if (count === best[1] && SIZE_ORDER.indexOf(size) < SIZE_ORDER.indexOf(best[0])) return [size, count]
+          if (
+            count === best[1] &&
+            SIZE_ORDER.indexOf(size) < SIZE_ORDER.indexOf(best[0])
+          )
+            return [size, count]
           return best
         },
         ['extra large', -1],
@@ -107,10 +128,24 @@ async function tallyExpiredVotes(): Promise<void> {
 
       const voteTotal = [...voteCounts.values()].reduce((s, n) => s + n, 0)
       await message
-        .edit(`✅ "${def.name}" assigned as **${winner[0]}** (${winner[1]} of ${voteTotal} vote${voteTotal !== 1 ? 's' : ''})`)
+        .edit(
+          `✅ "${def.name}" assigned as **${winner[0]}** (${
+            winner[1]
+          } of ${voteTotal} vote${voteTotal !== 1 ? 's' : ''})`,
+        )
         .catch(() => {})
     } catch (e) {
-      console.error(`choreDefinitionVoteTally: error tallying votes for "${def.name}"`, e)
+      // if code === 10008 (Unknown Message), the message was likely deleted; just clear the vote info and move on
+      if ((e as any).code === 10008) {
+        def.discordVoteMessageId = null
+        def.votePostedAt = null
+        await repo.save(def)
+      } else {
+        console.error(
+          `choreDefinitionVoteTally: error tallying votes for "${def.name}"`,
+          e,
+        )
+      }
     }
   }
 }
