@@ -26,7 +26,8 @@ export async function selectMultipleFromList<T>(
             minimum: 0,
             maximum: items.length - 1,
           },
-          description: 'Zero-based indices of all matching items. Empty array if none match.',
+          description:
+            'Zero-based indices of all matching items. Empty array if none match.',
         },
       },
       required: ['indices'],
@@ -38,15 +39,21 @@ export async function selectMultipleFromList<T>(
     .map((item, i) => `[${i}] ${JSON.stringify(item)}`)
     .join('\n')
 
-  const systemPrompt = `You are a precise selector. Given a subject and a list of numbered items, select all items whose meaning matches the instruction relative to the subject. Return an empty array if none qualify.
+  const systemPrompt = `You are a precise selector. Given a subject and a list of numbered items, select all items whose meaning matches the following instruction relative to the subject. Return an empty array if none qualify.
 
-Items:
-${numberedList}`
+${instruction}
+
+# Subject
+
+${subject}`
 
   const selected = await Atlas.processToolRequest(
     tool,
     systemPrompt,
-    [`Subject: ${subject}\nInstruction: ${instruction}`],
+    [
+      `Items:
+${numberedList}`,
+    ],
     undefined,
     tracer,
   )

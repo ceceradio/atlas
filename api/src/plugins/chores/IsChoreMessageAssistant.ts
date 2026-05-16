@@ -69,6 +69,9 @@ Tool call: IsChoreMessage({ "answer": true })
 Message: "I should probably do laundry sometime"
 Tool call: IsChoreMessage({ "answer": false })
 
+Message: "btw refilling the bathroom soap is a small chore"
+Tool call: IsChoreMessage({ "answer": false })
+
 Message: "the bathroom is a mess, someone needs to clean it"
 Tool call: IsChoreMessage({ "answer": false })
 

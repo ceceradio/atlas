@@ -52,16 +52,22 @@ function DefinitionRow({
   def,
   aliases = [],
   isAlias = false,
+  forceExpanded,
 }: {
   def: IChoreDefinition
   aliases?: IChoreDefinition[]
   isAlias?: boolean
+  forceExpanded?: boolean
 }) {
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(def.name)
   const [size, setSize] = useState<ChoreDifficulty | ''>(def.size ?? '')
   const [aliasOfId, setAliasOfId] = useState<string>(def.aliasOfId ?? '')
   const [aliasesOpen, setAliasesOpen] = useState(false)
+
+  useEffect(() => {
+    if (forceExpanded !== undefined) setAliasesOpen(forceExpanded)
+  }, [forceExpanded])
   const [updateDef, { isLoading: saving }] = useUpdateChoreDefinitionMutation()
   const [deleteDef, { isLoading: deleting }] = useDeleteChoreDefinitionMutation()
   const [sendVote, { isLoading: sendingVote }] = useSendVoteForChoreDefinitionMutation()
@@ -348,6 +354,7 @@ function VoteChannelSettings() {
 
 export function ChoreDefinitionsPanel() {
   const { data: definitions = [], isLoading } = useGetChoreDefinitionsQuery()
+  const [allExpanded, setAllExpanded] = useState(false)
 
   // Split canonicals from aliases
   const canonicals = definitions.filter((d) => d.aliasOfId === null)
@@ -379,7 +386,14 @@ export function ChoreDefinitionsPanel() {
 
   return (
     <Box padding="1.5rem" maxWidth="800px" margin="0 auto">
-      <Text fontSize="xl" fontWeight="bold" marginBottom="1rem">Chore Definitions</Text>
+      <Flex alignItems="center" marginBottom="1rem" gap="0.75rem">
+        <Text fontSize="xl" fontWeight="bold">Chore Definitions</Text>
+        {aliasesByCanonical.size > 0 && (
+          <Button size="xs" variant="outline" onClick={() => setAllExpanded((v) => !v)}>
+            {allExpanded ? 'Collapse all aliases' : 'Expand all aliases'}
+          </Button>
+        )}
+      </Flex>
 
       <VoteChannelSettings />
 
@@ -393,7 +407,7 @@ export function ChoreDefinitionsPanel() {
           <SectionHeading label="Unrated" />
           <VStack spacing="0.35rem" align="stretch">
             {unrated.map((def) => (
-              <DefinitionRow key={def.id} def={def} aliases={aliasesByCanonical.get(def.id)} />
+              <DefinitionRow key={def.id} def={def} aliases={aliasesByCanonical.get(def.id)} forceExpanded={aliasesByCanonical.has(def.id) ? allExpanded : undefined} />
             ))}
           </VStack>
         </Box>
@@ -404,7 +418,7 @@ export function ChoreDefinitionsPanel() {
           <SectionHeading label={SIZE_LABELS[size]} />
           <VStack spacing="0.35rem" align="stretch">
             {items.map((def) => (
-              <DefinitionRow key={def.id} def={def} aliases={aliasesByCanonical.get(def.id)} />
+              <DefinitionRow key={def.id} def={def} aliases={aliasesByCanonical.get(def.id)} forceExpanded={aliasesByCanonical.has(def.id) ? allExpanded : undefined} />
             ))}
           </VStack>
         </Box>
@@ -415,7 +429,7 @@ export function ChoreDefinitionsPanel() {
           <SectionHeading label="Not a Chore" />
           <VStack spacing="0.35rem" align="stretch">
             {notAChore.map((def) => (
-              <DefinitionRow key={def.id} def={def} aliases={aliasesByCanonical.get(def.id)} />
+              <DefinitionRow key={def.id} def={def} aliases={aliasesByCanonical.get(def.id)} forceExpanded={aliasesByCanonical.has(def.id) ? allExpanded : undefined} />
             ))}
           </VStack>
         </Box>

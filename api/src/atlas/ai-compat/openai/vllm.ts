@@ -170,6 +170,24 @@ function mapAssistantMessage(
     role: 'assistant',
   }
 }
+function mapToolCallMessage(
+  message: IAtlasToolCallMessage,
+): ChatCompletionAssistantMessageParam {
+  return {
+    role: 'assistant',
+    content: null,
+    tool_calls: [
+      {
+        id: message.id,
+        type: 'function',
+        function: {
+          name: message.name,
+          arguments: JSON.stringify(message.args),
+        },
+      },
+    ],
+  }
+}
 function mapSystemMessage(
   message: IAtlasSystemMessage,
 ): ChatCompletionSystemMessageParam {
@@ -260,6 +278,7 @@ async function doGetAIResponse(
   selectedToolName?: string,
   tracer?: ITracer,
   maxTokens?: number,
+  temperature?: number,
 ): Promise<IAtlasMessage[]> {
   const rawMessages = messages.map(VllmCompatibility.mapToOpenAI)
   const compatibleTools = tools.map((tool) => mapTool(tool))
@@ -298,7 +317,7 @@ async function doGetAIResponse(
     model,
     tools: compatibleTools.length ? compatibleTools : undefined,
     user: userId,
-    temperature: TEMPERATURE,
+    temperature: temperature ?? TEMPERATURE,
     top_p: 0.8,
     presence_penalty: 2,
     max_tokens: maxTokens,
@@ -325,7 +344,7 @@ async function doGetAIResponse(
     tracer?.trace(
       compatibleMessages,
       model,
-      'getAIResponse',
+      'getAIResponse ' + (selectedToolName ?? 'no-tool'),
       {
         skipTraceUpdate: true,
         tools: compatibleTools.map((tool) => tool.function.name),
@@ -352,6 +371,7 @@ export const VllmCompatibility = {
     if (message.role === 'assistant') return mapAssistantMessage(message)
     if (message.role === 'system') return mapSystemMessage(message)
     if (message.role === 'tool_response') return mapToolResponseMessage(message)
+    if (message.role === 'tool_call') return mapToolCallMessage(message)
     throw new Error('Unknown message role')
   },
   unmapResponseToAtlas(
@@ -385,6 +405,7 @@ export const VllmCompatibility = {
         selectedToolName,
         tracer,
         maxTokens,
+        temperature,
       )
     } catch (err) {
       const newModel = await fetchCurrentModel()

@@ -36,6 +36,7 @@ function JobRow({ job }: { job: JobEntry }) {
   const { isOpen, onOpen, onClose } = useDisclosure()
   const dispatch = useDispatch()
   const hasResult = job.result != null
+  const hasDetails = hasResult || (job.status === 'failed' && job.failedReason != null)
   const isDone = job.status === 'completed' || job.status === 'failed'
 
   return (
@@ -51,9 +52,9 @@ function JobRow({ job }: { job: JobEntry }) {
           alignItems="center"
           flex="1"
           minWidth={0}
-          cursor={hasResult ? 'pointer' : undefined}
-          onClick={hasResult ? onOpen : undefined}
-          _hover={hasResult ? { color: 'gray.900' } : undefined}
+          cursor={hasDetails ? 'pointer' : undefined}
+          onClick={hasDetails ? onOpen : undefined}
+          _hover={hasDetails ? { color: 'gray.900' } : undefined}
         >
           <Text color={color} lineHeight="1" flexShrink={0}>{symbol}</Text>
           <Text noOfLines={1} flex="1">{job.queue} #{job.jobId}</Text>
@@ -75,7 +76,7 @@ function JobRow({ job }: { job: JobEntry }) {
         )}
       </Flex>
 
-      {hasResult && (
+      {hasDetails && (
         <Modal isOpen={isOpen} onClose={onClose} size="xl" scrollBehavior="inside">
           <ModalOverlay />
           <ModalContent>
@@ -89,7 +90,9 @@ function JobRow({ job }: { job: JobEntry }) {
                 whiteSpace="pre-wrap"
                 wordBreak="break-all"
               >
-                {JSON.stringify(job.result, null, 2)}
+                {hasResult
+                  ? JSON.stringify(job.result, null, 2)
+                  : job.failedReason}
               </Box>
             </ModalBody>
           </ModalContent>

@@ -1,6 +1,7 @@
 import { DataSource } from 'typeorm'
 import { ChoreChannelMonitor } from './chores/ChoreChannelMonitor'
 import { ChoreDefinitionVoteMonitor } from './chores/ChoreDefinitionVoteMonitor'
+import { ensureChoreHistoryScheduled } from '@/queue/choreHistoryCron'
 import { AtlasDiscord } from './discord'
 import { AtlasTrading } from './trading'
 
@@ -66,5 +67,6 @@ export async function waitForAtlasPlugins(): Promise<AtlasPlugins> {
 export function initAtlasPlugins(): AtlasPlugins {
   if (instance) return instance
   instance = new AtlasPlugins()
+  if (process.env.HISTORIC_IMPORT_CRON_ENABLED) ensureChoreHistoryScheduled().catch((err) => console.error('choreHistoryCron: failed to schedule', err))
   return instance
 }

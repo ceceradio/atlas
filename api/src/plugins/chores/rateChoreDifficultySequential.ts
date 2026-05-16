@@ -7,7 +7,7 @@ import { magi } from '@/lib/magi'
 import { selectMultipleFromList } from '@/subfunctions/selectMultipleFromList'
 import {
   EmbeddingMatch,
-  findClosestSizedCanonicalChoreDefinitions,
+  findClosestChoreDefinitions,
 } from './choreDefinitionEmbeddings'
 import {
   ChoreDifficulty,
@@ -73,16 +73,17 @@ Some rooms are bigger than others, so some rooms are medium difficulty to vacuum
 
 ${exampleSections}
 
-# Closest match
+# Closest matches
 
-Below is a list of existing chore definitions that are closest to the input chore based on their embeddings. Use this information as context, but don't rely on it too much — the existing chore with the closest embedding might not actually be that similar to the input chore, and there might be important differences that affect the difficulty rating.
+Below is a list of existing chore definitions that are closest to the input chore based on their embeddings.
+Use this information as context, but don't rely on it too much — the existing chore with the closest embedding might not actually be that similar to the input chore, and there might be important differences that affect the difficulty rating.
 
 ${
   closestMatches
     ? closestMatches
         .map((closestMatch) =>
           closestMatch
-            ? `The closest existing chore definition to the input chore is "${closestMatch.name}", which is rated as ${closestMatch.size} difficulty.`
+            ? `"${closestMatch.name}": ${closestMatch.size} difficulty.`
             : '',
         )
         .join('\n')
@@ -114,15 +115,29 @@ export async function magiRateChoreDifficulty(
   tracer?: ITracer,
 ): Promise<ChoreDifficulty> {
   const embedding = await embedQwen(chore)
-  const closestMatches = await findClosestSizedCanonicalChoreDefinitions(
-    embedding,
-    3,
-  )
+  const closestMatches = await findClosestChoreDefinitions(embedding, 10)
   // select the closest match for real
   const closestMatchNames = await selectMultipleFromList(
     closestMatches.map((m) => m.name),
     chore,
-    'Pick the items from the list whose names are closest/most similar to the input item.',
+    `Pick the items from the list that are similar to, or describe, the input item.
+
+# Examples of matches
+
+Input: "vacuumed the living room"
+Matches:
+- "vacuuming the living room"
+- "vacuuming [living room, game room]"
+- "thoroughly vacuumed the living room"
+
+Input: "loady dishes"
+Matches:
+- "loading the dishwasher"
+
+Input: "kitchen trash"
+Matches:
+- "take out kitchen trash"
+- "take out [any room] trash"    `,
     tracer,
   )
   const closestMatchesFiltered = closestMatches.filter((m) =>

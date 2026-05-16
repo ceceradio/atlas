@@ -30,23 +30,35 @@ export async function setChoreDefinitionEmbedding(
  */
 export async function findClosestChoreDefinitions(
   embedding: number[],
-): Promise<EmbeddingMatch[] | null> {
-  const rows: Array<EmbeddingMatch> = await postgres.query(
-    `SELECT id, size, name, 1 - (embedding <=> $1::vector) AS similarity
+  limit = 3,
+): Promise<EmbeddingMatch[]> {
+  const rows: Array<{
+    id: string
+    name: string
+    size: string | null
+    similarity: number
+    alias_size?: string | null
+    alias_name?: string | null
+  }> = await postgres.query(
+    `SELECT chore_definition.id, chore_definition.size, chore_definition.name, 1 - (chore_definition.embedding <=> $1::vector) AS similarity, alias.size AS alias_size, alias.name AS alias_name
      FROM chore_definition
-     WHERE embedding IS NOT NULL
-     AND size IS NOT NULL
-     ORDER BY embedding <=> $1::vector
-     LIMIT 3`,
-    [pgvector.toSql(embedding)],
+     LEFT JOIN chore_definition AS alias ON alias.id = chore_definition."aliasOfId"
+     WHERE chore_definition.embedding IS NOT NULL
+     AND (chore_definition.size IS NOT NULL OR chore_definition."aliasOfId" IS NOT NULL)
+     ORDER BY chore_definition.embedding <=> $1::vector
+     LIMIT $2`,
+    [pgvector.toSql(embedding), limit],
   )
 
-  return rows.map((r) => ({
-    id: r.id,
-    name: r.name,
-    size: r.size,
-    similarity: r.similarity,
-  }))
+  return rows.map(
+    (r) =>
+      ({
+        id: r.id,
+        name: r.name,
+        size: r.alias_name ? r.alias_size! : r.size,
+        similarity: r.similarity,
+      } satisfies EmbeddingMatch),
+  )
 }
 
 /**

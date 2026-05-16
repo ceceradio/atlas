@@ -1,10 +1,12 @@
 import { LangfuseTracer } from '@/atlas/ai-compat/langfuse/LangfuseTracer'
 import { Chore } from '@/entity/Chore'
 import { ChoreMessage } from '@/entity/ChoreMessage'
-import { Client, Events, Message, PartialMessage } from 'discord.js'
+import { ChoreReaction } from '@/entity/ChoreReaction'
+import { Client, Events, Message, MessageReaction, PartialMessage, PartialMessageReaction, PartialUser, ReactionManager, User } from 'discord.js'
 import { DataSource } from 'typeorm'
 import { AtlasPlugin } from '../AtlasPlugin'
 import { DatedRatedChores } from './ChoreTypes'
+import { extractCustomReactionMetadata, filterReactions } from './reactionFilter'
 import { processChoreMessage } from './processChoreMessage'
 
 export class ChoreChannelMonitor implements AtlasPlugin {
@@ -34,6 +36,25 @@ export class ChoreChannelMonitor implements AtlasPlugin {
     await this.handleUpdate(newMessage as Message<boolean>)
   }
 
+  private onMessageDelete = async (message: Message<boolean> | PartialMessage) => {
+    if (message.channelId !== this.channelId) return
+    const choreMessageRepo = this.dataSource.getRepository(ChoreMessage)
+    const existing = await choreMessageRepo.findOne({ where: { discordMessageId: message.id } })
+    if (!existing) return
+    await choreMessageRepo.remove(existing)
+    console.log(`ChoreChannelMonitor: deleted ChoreMessage for discord message ${message.id}`)
+  }
+
+  private onReactionAdd = async (reaction: MessageReaction | PartialMessageReaction, _user: User | PartialUser) => {
+    if (reaction.message.channelId !== this.channelId) return
+    await this.handleReactionChange(reaction)
+  }
+
+  private onReactionRemove = async (reaction: MessageReaction | PartialMessageReaction, _user: User | PartialUser) => {
+    if (reaction.message.channelId !== this.channelId) return
+    await this.handleReactionChange(reaction)
+  }
+
   constructor(client: Client, dataSource: DataSource, channelId: string, organizationId: string) {
     this.client = client
     this.dataSource = dataSource
@@ -41,11 +62,17 @@ export class ChoreChannelMonitor implements AtlasPlugin {
     this.organizationId = organizationId
     this.client.on(Events.MessageCreate, this.onMessageCreate)
     this.client.on(Events.MessageUpdate, this.onMessageUpdate)
+    this.client.on(Events.MessageDelete, this.onMessageDelete)
+    this.client.on(Events.MessageReactionAdd, this.onReactionAdd)
+    this.client.on(Events.MessageReactionRemove, this.onReactionRemove)
   }
 
   async close() {
     this.client.off(Events.MessageCreate, this.onMessageCreate)
     this.client.off(Events.MessageUpdate, this.onMessageUpdate)
+    this.client.off(Events.MessageDelete, this.onMessageDelete)
+    this.client.off(Events.MessageReactionAdd, this.onReactionAdd)
+    this.client.off(Events.MessageReactionRemove, this.onReactionRemove)
   }
 
   private async handleCreate(message: Message<boolean>) {
@@ -53,6 +80,7 @@ export class ChoreChannelMonitor implements AtlasPlugin {
     const result = await processChoreMessage(message.content, message.createdAt.toISOString(), this.organizationId, tracer)
     if (!result) return
     await this.saveChoreMessage(message, result, null)
+    await this.saveReactionMetadata(message.reactions)
   }
 
   private async handleUpdate(message: Message<boolean>) {
@@ -69,12 +97,47 @@ export class ChoreChannelMonitor implements AtlasPlugin {
 
     if (existing) {
       await this.dataSource.getRepository(Chore).delete({ choreMessage: { id: existing.id } })
+      existing.content = message.content
       existing.editedAt = message.editedAt
+      existing.reactions = filterReactions(message.reactions)
       await choreMessageRepo.save(existing)
       await this.saveChores(existing, result)
     } else {
       await this.saveChoreMessage(message, result, message.editedAt)
     }
+    await this.saveReactionMetadata(message.reactions)
+  }
+
+  private async handleReactionChange(reaction: MessageReaction | PartialMessageReaction) {
+    const choreMessageRepo = this.dataSource.getRepository(ChoreMessage)
+    const existing = await choreMessageRepo.findOne({ where: { discordMessageId: reaction.message.id } })
+    if (!existing) return
+
+    let fullReaction = reaction
+    if (fullReaction.partial) {
+      try {
+        fullReaction = await fullReaction.fetch()
+      } catch (e) {
+        console.error('ChoreChannelMonitor: failed to fetch reaction', e)
+        return
+      }
+    }
+
+    existing.reactions = filterReactions(fullReaction.message.reactions)
+    await choreMessageRepo.save(existing)
+    await this.saveReactionMetadata(fullReaction.message.reactions)
+  }
+
+  private async saveReactionMetadata(reactions: ReactionManager) {
+    const metadata = extractCustomReactionMetadata(reactions)
+    if (metadata.length === 0) return
+    await this.dataSource.getRepository(ChoreReaction)
+      .createQueryBuilder()
+      .insert()
+      .into(ChoreReaction)
+      .values(metadata)
+      .orIgnore()
+      .execute()
   }
 
   private async saveChoreMessage(message: Message<boolean>, result: DatedRatedChores[], editedAt: Date | null) {
@@ -88,6 +151,7 @@ export class ChoreChannelMonitor implements AtlasPlugin {
         content: message.content,
         postedAt: message.createdAt,
         editedAt,
+        reactions: filterReactions(message.reactions),
       },
       { conflictPaths: ['discordMessageId'], skipUpdateIfNoValuesChanged: true },
     )

@@ -1,13 +1,5 @@
 import { ReactionManager } from 'discord.js'
-
-const EXCLUDED_REACTIONS = new Set([
-  // Hearts (all variants)
-  '❤️', '❤', '💜', '💕', '🩷', '🤍', '🖤', '💙', '💛', '💚', '🧡',
-  '🤎', '💝', '💞', '💓', '💗', '💖', '💘', '💟', '❣️', '❣',
-  '❤️‍🔥', '❤‍🔥', '❤️‍🩹', '❤‍🩹',
-  // Thank-you / appreciation
-  '🙏', '👏', 'thankyou',
-])
+import { EXCLUDED_REACTIONS } from './excludedReactions'
 
 export function filterReactions(reactions: ReactionManager): Record<string, number> {
   const result: Record<string, number> = {}

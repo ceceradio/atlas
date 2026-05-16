@@ -39,6 +39,7 @@ function truncate(text: string, max = 120) {
 export function ChoreMessagesPanel() {
   const [page, setPage] = useState(1)
   const [authorId, setAuthorId] = useReduxString('chore-messages-author-id')
+  const [search, setSearch] = useReduxString('chore-search')
   const [from, setFrom, to, setTo] = useChoreDateRange()
   const [noChores, setNoChores] = useState(false)
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
@@ -51,6 +52,7 @@ export function ChoreMessagesPanel() {
     from: from || undefined,
     to: to || undefined,
     noChores: noChores || undefined,
+    search: search || undefined,
   })
   const messages = data?.data ?? []
   const total = data?.total ?? 0
@@ -108,6 +110,12 @@ export function ChoreMessagesPanel() {
             value={to}
             onChange={handleFilterChange(setTo)}
             width="160px"
+          />
+          <Input
+            value={search}
+            onChange={handleFilterChange(setSearch)}
+            placeholder="Search content…"
+            width="220px"
           />
           <Checkbox
             isChecked={noChores}

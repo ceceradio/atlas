@@ -78,6 +78,7 @@ export type ChoreProfile = {
   zeroDays: number
   dailyData: { date: string; small: number; medium: number; large: number; extraLarge: number }[]
   reactions: Record<string, number>
+  voteCount: number
 }
 
 export type ChoreProfilesResponse = {
@@ -90,6 +91,33 @@ export type ChoreProfilesResponse = {
 export type ChoreProfilesParams = {
   from?: string
   to?: string
+}
+
+export type ChoreProfileHistoryEntry = {
+  date: string
+  small: number
+  medium: number
+  large: number
+  extraLarge: number
+  total: number
+  weightedTotal: number
+  averagePerDay: number
+  weightedAveragePerDay: number
+  activeDays: number
+  zeroDays: number
+}
+
+export type ChoreProfileHistoryResponse = {
+  discordAuthorId: string
+  from: string
+  to: string
+  history: ChoreProfileHistoryEntry[]
+}
+
+export type ChoreProfileHistoryParams = {
+  discordAuthorId: string
+  from: string
+  to: string
 }
 
 export type ChoreJobStatus = {
@@ -176,6 +204,7 @@ export type ChoreQueryParams = {
   choreMessageId?: string
   from?: string
   to?: string
+  search?: string
 }
 
 export type ChoreMessageQueryParams = {
@@ -185,6 +214,7 @@ export type ChoreMessageQueryParams = {
   from?: string
   to?: string
   noChores?: boolean
+  search?: string
 }
 
 export type DiscordChannelMessagesParams = {
@@ -271,6 +301,7 @@ export const atlasApi = createApi({
         if (params.choreMessageId) q.set('choreMessageId', params.choreMessageId)
         if (params.from) q.set('from', params.from)
         if (params.to) q.set('to', params.to)
+        if (params.search) q.set('search', params.search)
         return `/chores?${q}`
       },
       providesTags: [{ type: 'Chores', id: 'LIST' }],
@@ -303,6 +334,13 @@ export const atlasApi = createApi({
       providesTags: [{ type: 'Chores', id: 'LIST' }],
     }),
 
+    getChoreProfileHistory: builder.query<ChoreProfileHistoryResponse, ChoreProfileHistoryParams>({
+      query: ({ discordAuthorId, from, to }) => {
+        const q = new URLSearchParams({ from, to })
+        return `/chores/profiles/${encodeURIComponent(discordAuthorId)}/history?${q}`
+      },
+    }),
+
     updateChore: builder.mutation<ChoreItem, { id: string; patch: { description?: string; doneAt?: string; difficulty?: string } }>({
       query: ({ id, patch }) => ({
         url: `/chore/${id}`,
@@ -331,6 +369,7 @@ export const atlasApi = createApi({
         if (params.from) q.set('from', params.from)
         if (params.to) q.set('to', params.to)
         if (params.noChores) q.set('noChores', 'true')
+        if (params.search) q.set('search', params.search)
         return `/chore-messages?${q}`
       },
       providesTags: [{ type: 'ChoreMessages', id: 'LIST' }],
@@ -503,4 +542,5 @@ export const {
   useDeleteChoreDefinitionMutation,
   useSendVoteForChoreDefinitionMutation,
   useGetAuditLogQuery,
+  useGetChoreProfileHistoryQuery,
 } = atlasApi

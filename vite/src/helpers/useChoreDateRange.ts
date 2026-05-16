@@ -12,11 +12,11 @@ export function useChoreDateRange(): [string, (v: string) => void, string, (v: s
   useEffect(() => {
     if (!from) {
       const d = new Date()
-      d.setDate(d.getDate() - 30)
-      setFrom(d.toISOString().slice(0, 10))
+      d.setDate(d.getDate() - 13)
+      setFrom(d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' }))
     }
     if (!to) {
-      setTo(new Date().toISOString().slice(0, 10))
+      setTo(new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }))
     }
   }, [])
 

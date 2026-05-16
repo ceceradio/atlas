@@ -1,4 +1,5 @@
 import { keyframes } from '@emotion/react'
+export { EXCLUDED_REACTIONS } from '@atlas/api'
 
 export const DIFFICULTY_COLORS: Record<string, string> = {
   small: '#48BB78',
@@ -37,13 +38,6 @@ export function getPersonColor(name: string): string {
   return PERSON_COLORS[hashName(name) % PERSON_COLORS.length]
 }
 
-export const EXCLUDED_REACTIONS = new Set([
-  '❤️', '❤', '💜', '💕', '🩷', '🤍', '🖤', '💙', '💛', '💚', '🧡',
-  '🤎', '💝', '💞', '💓', '💗', '💖', '💘', '💟', '❣️', '❣',
-  '❤️‍🔥', '❤‍🔥', '❤️‍🩹', '❤‍🩹',
-  '🙏', '👏', 'thankyou',
-  '✨',
-])
 
 export const DAILY_WEIGHTS = { small: 1, medium: 2, large: 4, extraLarge: 6 } as const
 

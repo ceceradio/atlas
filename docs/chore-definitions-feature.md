@@ -212,27 +212,17 @@ Part 3d  Wire into AtlasPlugins + env var
 
 ---
 
-## Open questions / decisions before each part
+## Decisions
 
 **Part 1**
-- Should the seed script run automatically on startup or be a one-off CLI command?
-  (Recommendation: CLI script `api/src/cli/seed-chore-definitions.ts` to keep
-  startup clean.)
-- Hardcoded entries use bracket syntax like `[any room]` — keep as-is in the name
-  field or normalize?  Recommendation: keep as-is; the AI already understands them.
+- ✅ Seed via one-off CLI script `api/src/cli/seed-chore-definitions.ts` (not on startup).
+- ✅ Keep bracket syntax like `[any room]` as-is in the name field.
 
 **Part 2**
-- Fuzzy vs. exact matching for "already known" check: start with exact
-  case-insensitive, add AI-assisted fuzzy match only if false-positive rate is
-  noticeable.
-- Where to run detection: in-process (fast, simpler) vs. Bull queue (slower,
-  more resilient).  Recommendation: Bull queue so it doesn't block chore
-  processing.
+- ✅ Exact case-insensitive match first; add AI-assisted fuzzy match only if false-positive rate becomes noticeable.
+- ✅ Run detection in a Bull queue so it doesn't block chore processing.
 
 **Part 3**
-- What channel gets the voting messages?  Set via `DISCORD_CHORE_VOTE_CHANNEL_ID`
-  in `.env.api`.
-- Should multiple reactions be allowed (majority vote) or strictly first-wins?
-  Current spec: first valid reaction wins.  Can revisit.
-- Should the voting message be ephemeral or permanent?  Permanent (edited with
-  result) is easier and gives a searchable history.
+- ✅ Voting channel set via `DISCORD_CHORE_VOTE_CHANNEL_ID` in `.env.api`.
+- ✅ First valid reaction wins — no majority vote.
+- ✅ Voting message is permanent (edited with result for searchable history).

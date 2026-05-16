@@ -56,6 +56,21 @@ function mapAssistantMessage(
     role: 'assistant',
   }
 }
+function mapToolCallMessage(
+  message: IAtlasToolCallMessage,
+): ChatCompletionAssistantMessageParam {
+  return {
+    role: 'assistant',
+    content: null,
+    tool_calls: [
+      {
+        id: message.id,
+        type: 'function',
+        function: { name: message.name, arguments: JSON.stringify(message.args) },
+      },
+    ],
+  }
+}
 function mapSystemMessage(
   message: IAtlasSystemMessage,
 ): ChatCompletionSystemMessageParam {
@@ -143,7 +158,7 @@ export const OpenAICompatibility = {
     if (message.role === 'assistant') return mapAssistantMessage(message)
     if (message.role === 'system') return mapSystemMessage(message)
     if (message.role === 'tool_response') return mapToolResponseMessage(message)
-    //if (message.role === 'tool_call') return mapToolCallMessage(message)
+    if (message.role === 'tool_call') return mapToolCallMessage(message)
     throw new Error('Unknown message role')
   },
   unmapResponseToAtlas(

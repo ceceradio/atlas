@@ -16,6 +16,7 @@ export type ChoreMessageJobData = {
   discordMessageId: string
   discordChannelId: string
   organizationId?: string
+  skipDiscovery?: boolean
 }
 
 export const choreMessageQueue = new Queue<ChoreMessageJobData>(
@@ -23,22 +24,31 @@ export const choreMessageQueue = new Queue<ChoreMessageJobData>(
   { redis: redisConfig },
 )
 
-choreMessageQueue.process(async (job) => {
-  const { discordMessageId, discordChannelId, organizationId = '' } = job.data
+choreMessageQueue.process(1, async (job) => {
+  const { discordMessageId, discordChannelId, organizationId = '', skipDiscovery = false } = job.data
 
   const plugins = await waitForAtlasPlugins()
   const client = plugins.discord.client
   const channel = await client.channels.fetch(discordChannelId)
   if (!channel?.isTextBased()) throw new Error(`Channel ${discordChannelId} is not text-based`)
 
-  const discordMessage = await (channel as TextChannel).messages.fetch(discordMessageId)
+  let discordMessage
+  try {
+    discordMessage = await (channel as TextChannel).messages.fetch(discordMessageId)
+  } catch {
+    const db = await getDataSource()
+    const choreMessageRepo = db.getRepository(ChoreMessage)
+    const existing = await choreMessageRepo.findOne({ where: { discordMessageId } })
+    if (existing) await choreMessageRepo.remove(existing)
+    return
+  }
   const { content, author, createdAt, editedAt } = discordMessage
 
   const tracer = new LangfuseTracer('choreMessage', author.id, discordMessageId, {
     tags: ['chores'],
   })
 
-  const result = await processChoreMessage(content, createdAt.toISOString(), organizationId, tracer)
+  const result = await processChoreMessage(content, createdAt.toISOString(), organizationId, tracer, 0, skipDiscovery)
   const reactions = filterReactions(discordMessage.reactions)
   const reactionMetadata = extractCustomReactionMetadata(discordMessage.reactions)
 

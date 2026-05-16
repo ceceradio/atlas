@@ -4,6 +4,7 @@ import { AuditLog } from '@/entity/AuditLog'
 import { AuthProfile } from '@/entity/AuthProfile'
 import { Chore } from '@/entity/Chore'
 import { ChoreDefinition } from '@/entity/ChoreDefinition'
+import { ChoreDefinitionVote } from '@/entity/ChoreDefinitionVote'
 import { ChoreMessage } from '@/entity/ChoreMessage'
 import { ChoreReaction } from '@/entity/ChoreReaction'
 import { Conversation } from '@/entity/Conversation'
@@ -35,6 +36,7 @@ export const postgres = new DataSource({
     ChoreMessage,
     Chore,
     ChoreDefinition,
+    ChoreDefinitionVote,
     ChoreReaction,
   ],
   migrations: [__dirname + '/migration/*.{js,ts}'],

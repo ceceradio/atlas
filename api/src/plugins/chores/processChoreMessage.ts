@@ -14,6 +14,7 @@ export async function processChoreMessage(
   organizationId: string,
   tracer?: ITracer,
   _retries = 0,
+  skipDiscovery = false,
 ): Promise<DatedRatedChores[] | null> {
   if (_retries >= MAX_RETRIES) {
     console.error(`processChoreMessage: max retries (${MAX_RETRIES}) exceeded`)
@@ -32,12 +33,13 @@ export async function processChoreMessage(
       const chores = await choreSplitter(datedChore, tracer)
       console.log(chores)
 
-      // Fire-and-forget: discover new chore definitions without blocking rating
-      choreDefinitionDiscoveryQueue
-        .add({ chores: chores.chores, organizationId })
-        .catch((err) =>
-          console.error('choreDefinitionDiscovery queue error:', err),
-        )
+      if (!skipDiscovery) {
+        choreDefinitionDiscoveryQueue
+          .add({ chores: chores.chores, organizationId })
+          .catch((err) =>
+            console.error('choreDefinitionDiscovery queue error:', err),
+          )
+      }
 
       const ratedChores = await rateChoreDifficultySequential(chores, tracer)
       console.log(ratedChores)
@@ -54,7 +56,7 @@ export async function processChoreMessage(
         }, retrying...`,
         err.message,
       )
-      return processChoreMessage(message, date, organizationId, tracer, _retries + 1)
+      return processChoreMessage(message, date, organizationId, tracer, _retries + 1, skipDiscovery)
     }
     throw err
   }

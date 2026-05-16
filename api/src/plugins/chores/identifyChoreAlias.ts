@@ -1,10 +1,10 @@
+import { ITracer } from '@/atlas/ai-compat/langfuse/ITracer'
 import { embedQwen } from '@/atlas/ai-compat/openai/embed-qwen'
 import { Atlas } from '@/atlas/Atlas'
 import { ITool } from '@/atlas/IAtlas'
-import { ITracer } from '@/atlas/ai-compat/langfuse/ITracer'
 import { magi } from '@/lib/magi'
 import { ChoreAliasCheckTool } from './ChoreAliasCheckTool'
-import { findClosestSizedCanonicalChoreDefinitions } from './choreDefinitionEmbeddings'
+import { findClosestChoreDefinitions } from './choreDefinitionEmbeddings'
 import { normalizeChore } from './NormalizeChoreTool'
 
 const TRIALS = 5
@@ -14,7 +14,8 @@ type IsAliasArgs = { isAlias: boolean }
 
 const IsAliasTool: ITool<IsAliasArgs> = {
   name: 'IsAlias',
-  description: 'Confirm whether the candidate chore is truly an alias of the selected definition.',
+  description:
+    'Confirm whether the candidate chore is truly an alias of the selected definition.',
   arguments: {
     type: 'object',
     properties: {
@@ -32,7 +33,9 @@ const IsAliasTool: ITool<IsAliasArgs> = {
 function buildSelectionSystemMessage(
   candidates: Array<{ id: string; name: string }>,
 ): string {
-  const list = candidates.map((c) => `- id: ${c.id}  name: "${c.name}"`).join('\n')
+  const list = candidates
+    .map((c) => `- id: ${c.id}  name: "${c.name}"`)
+    .join('\n')
   return `You are determining whether a chore is an alias of an existing chore definition.
 
 An alias means the chore describes the **exact same underlying task** as the definition, just worded differently. Minor phrasing differences are fine — what matters is whether a person performing the chore would be doing the identical activity.
@@ -64,7 +67,10 @@ ${list}
 Return the id of the matching definition, or null if none apply.`
 }
 
-function buildConfirmationSystemMessage(choreName: string, definitionName: string): string {
+function buildConfirmationSystemMessage(
+  choreName: string,
+  definitionName: string,
+): string {
   return `You are confirming whether two chore descriptions refer to the exact same underlying task.
 
 Chore: "${choreName}"
@@ -94,15 +100,19 @@ export async function identifyChoreAlias(
   ])
 
   const [choreMatches, normalizedMatches] = await Promise.all([
-    findClosestSizedCanonicalChoreDefinitions(choreEmbedding),
-    findClosestSizedCanonicalChoreDefinitions(normalizedEmbedding),
+    findClosestChoreDefinitions(choreEmbedding),
+    findClosestChoreDefinitions(normalizedEmbedding),
   ])
 
   // Dedupe by id, keeping highest similarity
-  const candidateMap = new Map<string, { id: string; name: string; similarity: number }>()
+  const candidateMap = new Map<
+    string,
+    { id: string; name: string; similarity: number }
+  >()
   for (const m of [...choreMatches, ...normalizedMatches]) {
     const existing = candidateMap.get(m.id)
-    if (!existing || m.similarity > existing.similarity) candidateMap.set(m.id, m)
+    if (!existing || m.similarity > existing.similarity)
+      candidateMap.set(m.id, m)
   }
   const candidates = [...candidateMap.values()]
     .sort((a, b) => b.similarity - a.similarity)
@@ -132,7 +142,10 @@ export async function identifyChoreAlias(
   if (!pickedCandidate) return null
 
   // Pass 2: magi consensus to confirm the selected alias
-  const confirmationSystemMessage = buildConfirmationSystemMessage(chore, pickedCandidate.name)
+  const confirmationSystemMessage = buildConfirmationSystemMessage(
+    chore,
+    pickedCandidate.name,
+  )
   try {
     const confirmed = await magi(
       () =>

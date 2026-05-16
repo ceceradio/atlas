@@ -25,12 +25,14 @@ import {
 import { useEffect, useState } from 'react'
 import { ChoreRow, ChoreEditRow, EditForm } from './ChoreRowShared'
 import { useChoreDateRange } from '@/helpers/useChoreDateRange'
+import { useReduxString } from '@/helpers/useReduxString'
 
 const LIMIT = 20
 
 export function ChoresPanel() {
   const [page, setPage] = useState(1)
   const [authorId, setAuthorId] = useState('')
+  const [search, setSearch] = useReduxString('chore-search')
   const [from, setFrom, to, setTo] = useChoreDateRange()
   const [editingId, setEditingId] = useState<string | null>(null)
   const jobPoller = useJobPoller()
@@ -47,6 +49,7 @@ export function ChoresPanel() {
     discordAuthorId: authorId || undefined,
     from: from || undefined,
     to: to || undefined,
+    search: search || undefined,
   })
   const chores = choresData?.data ?? []
   const total = choresData?.total ?? 0
@@ -166,6 +169,12 @@ export function ChoresPanel() {
             onChange={handleFilterChange(setTo)}
             width="160px"
             placeholder="To"
+          />
+          <Input
+            value={search}
+            onChange={handleFilterChange(setSearch)}
+            placeholder="Search… use -term to exclude"
+            width="220px"
           />
         </HStack>
       </Box>

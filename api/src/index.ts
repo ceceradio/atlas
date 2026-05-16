@@ -1,11 +1,13 @@
 export * from './interface'
 export { AtlasSocketMessage, ChatMessage, Snapshot } from './ws'
+export { EXCLUDED_REACTIONS } from './plugins/chores/excludedReactions'
 import { DataSource } from 'typeorm'
 import { app } from './app'
 import { getDataSource } from './data-source'
 import { Organization } from './entity/Organization'
 import { initAtlasPlugins } from './plugins'
 import { ensureVoteTallyScheduled } from './queue/choreDefinitionVoteTally'
+import { ensureChoreWeeklySuperlativesScheduled } from './queue/choreWeeklySuperlatives'
 import { AtlasWebsocketServer } from './ws'
 
 const atlasPlugins = initAtlasPlugins()
@@ -23,6 +25,7 @@ getDataSource().then(async (_db) => {
     if (voteChannelId) atlasPlugins.initChoreDefinitionVoteMonitor(db, voteChannelId)
   }
   await ensureVoteTallyScheduled()
+  await ensureChoreWeeklySuperlativesScheduled()
 })
 
 const rest = app.listen(process.env.port || 3001)

@@ -1,13 +1,15 @@
 import { useGetChoreProfilesQuery, useGetMembersQuery } from '@/store/atlasApi'
 import { Box, Flex, HStack, Input, Spinner, Text, VStack } from '@chakra-ui/react'
 import { Button } from '@chakra-ui/react'
+import { useState } from 'react'
 import { useChoreDateRange } from '@/helpers/useChoreDateRange'
 import { AvgPerDayChart } from './AvgPerDayChart'
 import { SizeAdjustedPieChart } from './SizeAdjustedPieChart'
-import { ProfileCard } from './ProfileCard'
+import { ProfileCard, GraphOption } from './ProfileCard'
 
 export function ChoreProfilesPanel() {
   const [from, setFrom, to, setTo] = useChoreDateRange()
+  const [graph, setGraph] = useState<GraphOption>('weightedAveragePerDay')
 
   const { data, isLoading } = useGetChoreProfilesQuery({
     from: from || undefined,
@@ -42,22 +44,24 @@ export function ChoreProfilesPanel() {
             width="160px"
             placeholder="To"
           />
-          <Button
-            size="sm"
-            onClick={() => {
-              const today = new Date().toISOString().slice(0, 10)
-              const thirtyDaysAgo = new Date()
-              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-              const thirtyAgo = thirtyDaysAgo.toISOString().slice(0, 10)
-              setFrom(thirtyAgo)
-              setTo(today)
-            }}
-          >
-            Last 30 days
-          </Button>
           {data?.days != null && (
             <Text fontSize="sm" color="gray.500">{data.days} day{data.days !== 1 ? 's' : ''}</Text>
           )}
+          {[14, 30, 60].map((n) => (
+            <Button
+              key={n}
+              size="sm"
+              onClick={() => {
+                const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+                const d = new Date()
+                d.setDate(d.getDate() - (n - 1))
+                setFrom(d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' }))
+                setTo(today)
+              }}
+            >
+              Last {n} days
+            </Button>
+          ))}
         </HStack>
       </Box>
 
@@ -83,7 +87,7 @@ export function ChoreProfilesPanel() {
 
           <VStack alignItems="stretch" gap="1rem">
             {profiles.map((profile) => (
-              <ProfileCard key={profile.discordAuthorId} profile={profile} />
+              <ProfileCard key={profile.discordAuthorId} profile={profile} graph={graph} onGraphChange={setGraph} />
             ))}
           </VStack>
         </>

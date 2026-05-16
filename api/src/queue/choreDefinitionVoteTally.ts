@@ -1,5 +1,6 @@
 import { getDataSource } from '@/data-source'
 import { ChoreDefinition } from '@/entity/ChoreDefinition'
+import { ChoreDefinitionVote } from '@/entity/ChoreDefinitionVote'
 import { Organization } from '@/entity/Organization'
 import { getAtlasPlugins, waitForAtlasPlugins } from '@/plugins'
 import { ChoreDifficulty } from '@/plugins/chores/ChoreTypes'
@@ -87,17 +88,30 @@ async function tallyExpiredVotes(): Promise<void> {
       )
 
       // Count reactions, subtracting the bot's own if present
+      // Also collect unique voter names for participation tracking
       const voteCounts = new Map<ChoreDifficulty, number>()
+      const voterNames = new Set<string>()
       for (const [emoji, size] of Object.entries(EMOJI_TO_SIZE)) {
         const reaction = message.reactions.cache.get(emoji)
         if (!reaction) continue
-        const botReacted = reaction.users.cache.has(client.user!.id)
-        const count = reaction.count - (botReacted ? 1 : 0)
+        const users = await reaction.users.fetch()
+        let count = 0
+        for (const user of users.values()) {
+          if (user.id === client.user!.id) continue
+          count++
+          voterNames.add(user.username)
+        }
         if (count > 0) voteCounts.set(size, count)
       }
 
       def.discordVoteMessageId = null
       def.votePostedAt = null
+
+      const tallyDate = new Date().toISOString().slice(0, 10)
+      const voteRepo = db.getRepository(ChoreDefinitionVote)
+      for (const name of voterNames) {
+        await voteRepo.save(voteRepo.create({ discordName: name, tallyDate }))
+      }
 
       if (voteCounts.size === 0) {
         await repo.save(def)

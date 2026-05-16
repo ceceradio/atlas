@@ -36,10 +36,10 @@ export function AvgPerDayChart({ profiles, weighted = false, memberColors = {} }
         <BarChart
           data={data}
           layout="vertical"
-          margin={{ top: 0, right: 48, bottom: 0, left: 0 }}
+          margin={{ top: 16, right: 48, bottom: 16, left: 0 }}
         >
           <XAxis type="number" hide domain={[0, 'dataMax']} />
-          <YAxis type="category" dataKey="name" width={90} tick={{ fontSize: 13 }} />
+          <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 13, angle: -20, textAnchor: 'end' }} />
           <Tooltip
             formatter={(v) => [Number(v).toFixed(2), 'avg/day']}
             cursor={{ fill: 'rgba(0,0,0,0.05)' }}

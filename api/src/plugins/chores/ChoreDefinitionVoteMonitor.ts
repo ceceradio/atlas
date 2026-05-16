@@ -74,6 +74,62 @@ export class ChoreDefinitionVoteMonitor implements AtlasPlugin {
     }
   }
 
+  async aliasVoteMessage(def: ChoreDefinition, targetName: string): Promise<void> {
+    if (!def.discordVoteMessageId) return
+    const channel = await this.client.channels
+      .fetch(this.channelId)
+      .catch(() => null)
+    if (!channel?.isTextBased()) return
+
+    try {
+      const msg = await (channel as TextChannel).messages.fetch(
+        def.discordVoteMessageId,
+      )
+      await msg.edit(`🔗 "${def.name}" is an alias for "${targetName}" — vote cancelled`)
+      if (msg.thread) {
+        await msg.thread.setArchived(true).catch((e) => {
+          console.error(
+            `ChoreDefinitionVoteMonitor: failed to archive thread for "${def.name}"`,
+            e,
+          )
+        })
+      }
+    } catch (e) {
+      console.error(
+        `ChoreDefinitionVoteMonitor: failed to update vote message after aliasing "${def.name}"`,
+        e,
+      )
+    }
+  }
+
+  async cancelVoteMessage(def: ChoreDefinition): Promise<void> {
+    if (!def.discordVoteMessageId) return
+    const channel = await this.client.channels
+      .fetch(this.channelId)
+      .catch(() => null)
+    if (!channel?.isTextBased()) return
+
+    try {
+      const msg = await (channel as TextChannel).messages.fetch(
+        def.discordVoteMessageId,
+      )
+      await msg.edit(`🗑️ "${def.name}" was deleted — vote cancelled`)
+      if (msg.thread) {
+        await msg.thread.setArchived(true).catch((e) => {
+          console.error(
+            `ChoreDefinitionVoteMonitor: failed to archive thread for "${def.name}"`,
+            e,
+          )
+        })
+      }
+    } catch (e) {
+      console.error(
+        `ChoreDefinitionVoteMonitor: failed to cancel vote message for "${def.name}"`,
+        e,
+      )
+    }
+  }
+
   async sendVoteMessages(definitions: ChoreDefinition[]): Promise<void> {
     const channel = await this.client.channels
       .fetch(this.channelId)
