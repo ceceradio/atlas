@@ -1,4 +1,4 @@
-import { IOrganization } from '@/interface/Organization'
+import { IOrganization } from './Organization'
 
 export type IDepository = {
   uuid: string

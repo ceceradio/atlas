@@ -1,9 +1,9 @@
-import { IConversation } from '@/interface/Conversation'
-import { IDepository } from '@/interface/Depository'
-import { OrganizationSettings } from '@/interface/OrganizationSettings'
-import { IServicingKey } from '@/interface/ServicingKey'
-import { IUser } from '@/interface/User'
-import { Relation } from 'typeorm'
+import { IConversation } from './Conversation'
+import { IDepository } from './Depository'
+import { OrganizationSettings } from './OrganizationSettings'
+import { IServicingKey } from './ServicingKey'
+import { IUser } from './User'
+type Relation<T> = T
 
 export type IOrganization = {
   uuid: string

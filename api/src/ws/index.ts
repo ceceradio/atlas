@@ -10,16 +10,8 @@ import { identify } from './identify'
 import { joined } from './joined'
 import { update } from './update'
 
-export type AtlasSocketMessage<T> = {
-  type:
-    | 'update'
-    | 'identify'
-    | 'identified'
-    | 'joined'
-    | 'snapshot'
-    | 'message'
-    | 'jobEvent'
-} & T
+export type { AtlasSocketMessage } from '@/interface/socket'
+import type { AtlasSocketMessage } from '@/interface/socket'
 export type Identify = {
   token: string
 }

@@ -1,5 +1,5 @@
-import { AuthProviders } from '@/interface/AuthProviders'
-import { IServicer } from '@/interface/Servicer'
+import { AuthProviders } from './AuthProviders'
+import { IServicer } from './Servicer'
 
 export type IServicerAuthProfile = {
   uuid: string

@@ -7,7 +7,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@atlas/api': path.resolve(__dirname, '../api/src'),
+      '@atlas/api': path.resolve(__dirname, '../api/src/interface'),
     },
   },
   server: {

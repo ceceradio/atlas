@@ -1,7 +1,7 @@
 import { IAtlasMessage } from '@/atlas/IAtlas'
-import type { IMessage } from '@/interface/Message'
-import type { IOrganization } from '@/interface/Organization'
-import type { IUser } from '@/interface/User'
+import type { IMessage } from './Message'
+import type { IOrganization } from './Organization'
+import type { IUser } from './User'
 
 export type IConversation = {
   uuid: string

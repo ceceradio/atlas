@@ -1,5 +1,5 @@
-import { AuthProviders } from '@/interface/AuthProviders'
-import { IUser } from '@/interface/User'
+import { AuthProviders } from './AuthProviders'
+import { IUser } from './User'
 
 export type IAuthProfile = {
   uuid: string

@@ -1,6 +1,6 @@
-import { IServicerAuthProfile } from '@/interface/ServicerAuthProfile'
-import { IServicingKey } from '@/interface/ServicingKey'
-import { Relation } from 'typeorm'
+import { IServicerAuthProfile } from './ServicerAuthProfile'
+import { IServicingKey } from './ServicingKey'
+type Relation<T> = T
 
 export type IServicer = {
   uuid: string

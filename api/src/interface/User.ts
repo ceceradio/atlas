@@ -1,8 +1,8 @@
-import { IAuthProfile } from '@/interface/AuthProfile'
-import { IConversation } from '@/interface/Conversation'
-import { IMessage } from '@/interface/Message'
-import { IOrganization } from '@/interface/Organization'
-import { Relation } from 'typeorm'
+import { IAuthProfile } from './AuthProfile'
+import { IConversation } from './Conversation'
+import { IMessage } from './Message'
+import { IOrganization } from './Organization'
+type Relation<T> = T
 
 export type IUser = {
   uuid: string

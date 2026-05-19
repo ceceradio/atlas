@@ -1,5 +1,5 @@
-import { IOrganization } from '@/interface/Organization'
-import { IServicer } from '@/interface/Servicer'
+import { IOrganization } from './Organization'
+import { IServicer } from './Servicer'
 
 export type IServicingKey = {
   uuid: string
