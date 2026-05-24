@@ -3,7 +3,9 @@ import 'reflect-metadata'
 import { AuditLog } from '@/entity/AuditLog'
 import { AuthProfile } from '@/entity/AuthProfile'
 import { Chore } from '@/entity/Chore'
+import { ChoreChunk } from '@/entity/ChoreChunk'
 import { ChoreDefinition } from '@/entity/ChoreDefinition'
+import { ChoreDefinitionMatch } from '@/entity/ChoreDefinitionMatch'
 import { ChoreDefinitionVote } from '@/entity/ChoreDefinitionVote'
 import { ChoreMessage } from '@/entity/ChoreMessage'
 import { ChoreReaction } from '@/entity/ChoreReaction'
@@ -35,7 +37,9 @@ export const postgres = new DataSource({
     Message,
     ChoreMessage,
     Chore,
+    ChoreChunk,
     ChoreDefinition,
+    ChoreDefinitionMatch,
     ChoreDefinitionVote,
     ChoreReaction,
   ],

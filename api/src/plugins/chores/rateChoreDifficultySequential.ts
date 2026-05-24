@@ -42,21 +42,37 @@ async function buildSystemMessage(
   const definitions = await postgres
     .getRepository(ChoreDefinition)
     .createQueryBuilder('def')
-    .where('def.size IS NOT NULL')
+    .where('def.size IS NOT NULL OR def.aliasOfId IS NOT NULL')
     .orderBy('def.name', 'ASC')
     .getMany()
 
-  // Group by size in canonical order
-  const bySize = new Map<ChoreDifficulty, string[]>()
-  for (const size of SIZE_ORDER) bySize.set(size, [])
+  const canonicals = definitions.filter((d) => d.aliasOfId === null && d.size)
+  const aliasesByParentId = new Map<string, string[]>()
   for (const def of definitions) {
-    if (def.size) bySize.get(def.size)?.push(def.name)
+    if (def.aliasOfId) {
+      const list = aliasesByParentId.get(def.aliasOfId) ?? []
+      list.push(def.name)
+      aliasesByParentId.set(def.aliasOfId, list)
+    }
+  }
+
+  // Group canonicals by size in canonical order
+  const bySize = new Map<ChoreDifficulty, ChoreDefinition[]>()
+  for (const size of SIZE_ORDER) bySize.set(size, [])
+  for (const def of canonicals) {
+    if (def.size) bySize.get(def.size)?.push(def)
   }
 
   const exampleSections = SIZE_ORDER.map((size) => {
     const entries = bySize.get(size) ?? []
     if (entries.length === 0) return ''
-    const bullets = entries.map((name) => `- "${name}": ${size}`).join('\n')
+    const bullets = entries.map((def) => {
+      const aliases = aliasesByParentId.get(def.id)
+      const aliasList = aliases?.length
+        ? '\n' + aliases.map((a) => `  - "${a}": ${size}`).join('\n')
+        : ''
+      return `- "${def.name}": ${size}${aliasList}`
+    }).join('\n')
     return `## ${SIZE_HEADINGS[size]}\n\n${bullets}`
   })
     .filter(Boolean)

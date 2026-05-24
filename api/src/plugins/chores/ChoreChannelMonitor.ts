@@ -6,8 +6,11 @@ import { Client, Events, Message, MessageReaction, PartialMessage, PartialMessag
 import { DataSource } from 'typeorm'
 import { AtlasPlugin } from '../AtlasPlugin'
 import { DatedRatedChores } from './ChoreTypes'
+import { setChoreChunkEmbedding } from './choreChunkEmbeddings'
+import { matchChoreToDefinition, saveChoreDefinitionMatch } from './matchChoreToDefinition'
 import { extractCustomReactionMetadata, filterReactions } from './reactionFilter'
 import { processChoreMessage } from './processChoreMessage'
+import { embedQwen } from '@/atlas/ai-compat/openai/embed-qwen'
 
 export class ChoreChannelMonitor implements AtlasPlugin {
   private client: Client
@@ -161,7 +164,7 @@ export class ChoreChannelMonitor implements AtlasPlugin {
 
   private async saveChores(choreMessage: ChoreMessage, result: DatedRatedChores[]) {
     const choreRepo = this.dataSource.getRepository(Chore)
-    await choreRepo.save(
+    const saved = await choreRepo.save(
       result.flatMap((dated) =>
         dated.chores.map((rated) =>
           choreRepo.create({
@@ -174,5 +177,13 @@ export class ChoreChannelMonitor implements AtlasPlugin {
         ),
       ),
     )
+    for (const chore of saved) {
+      embedQwen(chore.description)
+        .then((embedding) => setChoreChunkEmbedding(chore.id, embedding))
+        .catch((err) => console.error(`ChoreChannelMonitor: failed to embed chore ${chore.id}`, err))
+      matchChoreToDefinition(chore.description)
+        .then((defId) => defId ? saveChoreDefinitionMatch(chore.id, defId) : null)
+        .catch((err) => console.error(`ChoreChannelMonitor: failed to match chore ${chore.id}`, err))
+    }
   }
 }

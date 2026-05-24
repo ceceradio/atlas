@@ -21,6 +21,7 @@ import {
   Select,
   Spinner,
   Text,
+  Tooltip,
   VStack,
 } from '@chakra-ui/react'
 import { useEffect, useState } from 'react'
@@ -171,6 +172,25 @@ function DefinitionRow({
           />
         )}
         <Text fontSize="sm" flex="1" wordBreak="break-word">{def.name}</Text>
+        {!isAlias && def.lastDone && (
+          <Tooltip
+            label={
+              <Box fontSize="xs" lineHeight="1.6">
+                <Text fontWeight="semibold">{def.lastDone.authorName}</Text>
+                <Text color="whiteAlpha.800">{def.lastDone.choreDescription}</Text>
+                {def.lastDone.choreDifficulty !== 'not a chore' && (
+                  <Text color="whiteAlpha.600" textTransform="capitalize">{def.lastDone.choreDifficulty}</Text>
+                )}
+              </Box>
+            }
+            placement="top"
+            hasArrow
+          >
+            <Text fontSize="xs" color="gray.400" whiteSpace="nowrap" flexShrink={0} cursor="default">
+              {new Date(def.lastDone.doneAt).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' })}
+            </Text>
+          </Tooltip>
+        )}
         {isAlias ? (
           <Badge colorScheme="purple" variant="outline" fontSize="xs">alias</Badge>
         ) : (

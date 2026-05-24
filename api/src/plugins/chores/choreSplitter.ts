@@ -1,10 +1,12 @@
 import { ITracer } from '@/atlas/ai-compat/langfuse/ITracer'
 import { Atlas } from '@/atlas/Atlas'
+import { combiner } from '@/lib/combiner'
 import { getDataSource } from '@/data-source'
 import { ChoreDefinition } from '@/entity/ChoreDefinition'
 import { splitIntoChunks } from '@/subfunctions/splitIntoChunks'
 import pgvector from 'pgvector'
 import { Brackets } from 'typeorm'
+import { applyChoreAuditChanges, ChoreAuditorTool } from './ChoreAuditorTool'
 import { ChoreSplitterTool } from './ChoreSplitterTool'
 import { DatedChores, DatedChoresRaw } from './ChoreTypes'
 
@@ -259,8 +261,44 @@ Apply the same shortname expansions as before (e.g. "gbr" → "green bathroom", 
     0.3,
   )
 
+  const combinedChores = await combiner([chores, missingChores], tracer)
+
+  const auditSystemMessage = `${systemMessage}
+
+# Audit Instructions
+
+You are now reviewing an already-extracted chore list for accuracy. Your job is to correct inaccuracies — not to re-split.
+
+You will be given:
+1. The original chore message.
+2. A numbered list of chores extracted from that message.
+
+For each extracted chore, decide:
+- KEEP it (emit no change) if it accurately reflects something described in the original message. This should be the outcome for the vast majority of chores.
+- REMOVE it if it is hallucinated — not mentioned or clearly not implied by the original message at all.
+- RENAME it only if the wording is substantively wrong in a way that would mislead — e.g. the original says "quick vacuum" but the extraction says "deep cleaned the kitchen." Do NOT rename for stylistic differences, minor wording variations, or shortname expansions that are already correct. Renames should be rare.
+
+Do not add new chores — only correct or remove existing ones. When in doubt, keep.`
+
+  const auditMessages = [
+    commonShortnamePrompt,
+    ...(choreDefinitionsMessage ? [choreDefinitionsMessage] : []),
+    `# Original Message\n\n${input.message}`,
+    `# Extracted Chores\n\n${combinedChores.map((c, i) => `${i}. ${c}`).join('\n')}`,
+    `Review the extracted chores against the original message. For each inaccuracy, emit a change: remove hallucinated chores, rename ones that misrepresent the original. If the list is fully accurate, return an empty changes array.`,
+  ]
+
+  const { changes } = await Atlas.processToolRequest(
+    ChoreAuditorTool,
+    auditSystemMessage,
+    auditMessages,
+    undefined,
+    tracer,
+    0.2,
+  )
+
   return {
     date: input.date,
-    chores: [...chores, ...missingChores],
+    chores: applyChoreAuditChanges(combinedChores, changes),
   }
 }

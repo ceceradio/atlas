@@ -8,6 +8,7 @@ import { ChoreMessage } from '@/entity/ChoreMessage'
 import { ChoreReaction } from '@/entity/ChoreReaction'
 import { dateSubtract } from '@/lib/dateAdd'
 import { getAtlasPlugins } from '@/plugins'
+import { findLastDoneAtByDefinitions } from '@/plugins/chores/choreChunkEmbeddings'
 import { setChoreDefinitionEmbedding } from '@/plugins/chores/choreDefinitionEmbeddings'
 import { ChoreDifficulty } from '@/plugins/chores/ChoreTypes'
 import { choreDefinitionDiscoveryQueue } from '@/queue/choreDefinitionDiscovery'
@@ -778,7 +779,8 @@ choresApp.get('/chore-definitions', async (request, response) => {
   if (sized === 'true') qb.andWhere('def.size IS NOT NULL')
   if (sized === 'false') qb.andWhere('def.size IS NULL')
   const definitions = await qb.getMany()
-  return response.json(definitions.map((d) => d.toApi()))
+  const lastDoneAtMap = await findLastDoneAtByDefinitions(definitions.map((d) => d.id))
+  return response.json(definitions.map((d) => d.toApi(lastDoneAtMap.get(d.id))))
 })
 
 choresApp.post('/chore-definitions', async (request, response) => {

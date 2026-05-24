@@ -4,9 +4,11 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   Relation,
 } from 'typeorm'
+import { ChoreChunk } from './ChoreChunk'
 import { ChoreMessage } from './ChoreMessage'
 
 export type ChoreAIOriginal = {
@@ -37,6 +39,9 @@ export class Chore {
 
   @Column({ type: 'jsonb' })
   aiOriginal: ChoreAIOriginal
+
+  @OneToMany(() => ChoreChunk, (chunk) => chunk.chore, { cascade: true })
+  chunks: Relation<ChoreChunk>[]
 
   @CreateDateColumn({ type: 'timestamp' })
   createdAt: Date

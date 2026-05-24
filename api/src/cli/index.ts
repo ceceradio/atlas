@@ -5,6 +5,8 @@ import listUsers from '@/cli/list-users'
 import registerOrganization from '@/cli/register-organization'
 import registerUser from '@/cli/register-user'
 import seedChoreDefinitions from '@/cli/seed-chore-definitions'
+import backfillChoreChunks from '@/cli/backfill-chore-chunks'
+import backfillChoreDefinitionMatches from '@/cli/backfill-chore-definition-matches'
 import backfillChoreEmbeddings from '@/cli/backfill-chore-embeddings'
 import backfillChoreReactions from '@/cli/backfill-chore-reactions'
 import testChoreMatching from '@/cli/test-chore-matching'
@@ -20,7 +22,7 @@ import { DataSource } from 'typeorm'
 import respond from './respond'
 import responseEvaluation from './response-evaluation'
 import retitleConversation from './retitle-conversation'
-export { listChoreDefinitions, listUsers, registerOrganization, registerUser, retitleConversation, seedChoreDefinitions, backfillChoreEmbeddings, backfillChoreReactions, testChoreMatching, testNewChore, reprocessFailedChoreJobs, postWeeklySuperlatives, testCombiner, evalCombiner, testDrilTweet }
+export { listChoreDefinitions, listUsers, registerOrganization, registerUser, retitleConversation, seedChoreDefinitions, backfillChoreChunks, backfillChoreDefinitionMatches, backfillChoreEmbeddings, backfillChoreReactions, testChoreMatching, testNewChore, reprocessFailedChoreJobs, postWeeklySuperlatives, testCombiner, evalCombiner, testDrilTweet }
 
 if (require.main === module) {
   const argv = minimist(process.argv.slice(2))
@@ -45,6 +47,10 @@ if (require.main === module) {
         return await respond(dataSource, argv.uuid)
       } else if (command === 'seedChoreDefinitions') {
         return await seedChoreDefinitions(dataSource)
+      } else if (command === 'backfillChoreChunks') {
+        return await backfillChoreChunks(dataSource, !!argv.overwrite)
+      } else if (command === 'backfillChoreDefinitionMatches') {
+        return await backfillChoreDefinitionMatches(dataSource, !!argv.overwrite)
       } else if (command === 'backfillChoreEmbeddings') {
         return await backfillChoreEmbeddings(dataSource, !!argv.overwrite)
       } else if (command === 'testChoreMatching') {

@@ -1,7 +1,7 @@
 export { EXCLUDED_REACTIONS } from './excludedReactions'
 export type { AtlasSocketMessage } from './socket'
 export type { IAuthProfile } from './AuthProfile'
-export type { IChoreDefinition, ChoreDifficulty } from './ChoreDefinition'
+export type { IChoreDefinition, IChoreDefinitionLastDone, ChoreDifficulty } from './ChoreDefinition'
 export type { IAPIConversation, IConversation } from './Conversation'
 export type { IDepository } from './Depository'
 export type * from './Message'

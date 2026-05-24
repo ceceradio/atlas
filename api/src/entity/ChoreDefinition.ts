@@ -47,7 +47,7 @@ export class ChoreDefinition {
   @UpdateDateColumn({ type: 'timestamp' })
   updatedAt: Date
 
-  toApi() {
+  toApi(lastDone?: import('@/plugins/chores/choreChunkEmbeddings').LastDoneInfo | null) {
     const VOTE_WINDOW_MS = 24 * 60 * 60 * 1000
     const voteExpiresAt = this.discordVoteMessageId !== null && this.votePostedAt !== null
       ? new Date(this.votePostedAt.getTime() + VOTE_WINDOW_MS).toISOString()
@@ -59,6 +59,15 @@ export class ChoreDefinition {
       aliasOfId: this.aliasOfId ?? null,
       voteExpiresAt,
       createdAt: this.createdAt,
+      lastDone: lastDone
+        ? {
+            doneAt: lastDone.doneAt instanceof Date ? lastDone.doneAt.toISOString() : lastDone.doneAt,
+            choreId: lastDone.choreId,
+            choreDescription: lastDone.choreDescription,
+            choreDifficulty: lastDone.choreDifficulty,
+            authorName: lastDone.authorName,
+          }
+        : null,
     }
   }
 }
