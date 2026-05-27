@@ -1,6 +1,5 @@
 import { ITracer } from '@/atlas/ai-compat/langfuse/ITracer'
 import { Atlas } from '@/atlas/Atlas'
-import { combiner } from '@/lib/combiner'
 import { getDataSource } from '@/data-source'
 import { ChoreDefinition } from '@/entity/ChoreDefinition'
 import { splitIntoChunks } from '@/subfunctions/splitIntoChunks'
@@ -243,12 +242,43 @@ You will be given:
 
 Your job is to identify any chores described in the original message that are NOT already represented in the identified list. Be specific — only return chores that are genuinely missing, not paraphrases of chores already present. If all chores are accounted for, return an empty array.
 
-Apply the same shortname expansions as before (e.g. "gbr" → "green bathroom", "pbr" → "pink bathroom", etc.).`
+# Examples
+
+**Input:**
+Original Message: "I cleaned the kitchen countertops and Dusted lint dust from washer and dryer, gave dryer a quick lint brushing, and wiped a lil scummy buildup from inside of washer door."
+Already Identified Chores: ["cleaned the kitchen countertop(s)", "partially cleaned the washer"]
+
+**Output:** ["partially cleaned the dryer"]
+
+**Input:**
+Original Message: "I cleaned the spice countertop, microwave countertop, and the sink. I also did the laundry for the pbr."
+Already Identified Chores: ["cleaned the kitchen countertop(s)", "cleaned the kitchen sink", "did the laundry for the pink bathroom"]
+
+**Output:** []
+
+**Input:**
+Original Message: "I wetswiffed the gbr, 2f hallway, and quick vacc'd the livvy and the grand staircase."
+Already Identified Chores: ["wetswiffed the green bathroom", "quick vacuumed the living room", "quick vacuumed the grand staircase"]
+
+**Output:** ["wetswiffed the second floor hallway"]
+
+**Input:**
+Yesterday:
+- small loady (couple sessions throughout day) & ran dishwasher pm
+- vacuumed kitchen, narrow stairs, entry
+- clorox wiped counters pm
+- clorox wiped gbr sink
+Already Identified Chores: ["ran the dishwasher", "vacuumed the kitchen", "vacuumed the narrow stairs", "vacuumed the entryway", "cleaned the green bathroom sink"]
+
+**Output:** ["partially loaded the dishwasher", "clorox wiped the kitchen countertop(s)"]
+`
 
   const gapMessages = [
     commonShortnamePrompt,
     `# Original Message\n\n${input.message}`,
-    `# Already Identified Chores\n\n${chores.map((c, i) => `${i + 1}. ${c}`).join('\n')}`,
+    `# Already Identified Chores\n\n${chores
+      .map((c, i) => `${i + 1}. ${c}`)
+      .join('\n')}`,
     `Identify any chores in the original message that are NOT already in the list above. Return only the missing ones.`,
   ]
 
@@ -261,7 +291,7 @@ Apply the same shortname expansions as before (e.g. "gbr" → "green bathroom", 
     0.3,
   )
 
-  const combinedChores = await combiner([chores, missingChores], tracer)
+  const combinedChores = [...chores, ...missingChores]
 
   const auditSystemMessage = `${systemMessage}
 
@@ -284,7 +314,9 @@ Do not add new chores — only correct or remove existing ones. When in doubt, k
     commonShortnamePrompt,
     ...(choreDefinitionsMessage ? [choreDefinitionsMessage] : []),
     `# Original Message\n\n${input.message}`,
-    `# Extracted Chores\n\n${combinedChores.map((c, i) => `${i}. ${c}`).join('\n')}`,
+    `# Extracted Chores\n\n${combinedChores
+      .map((c, i) => `${i}. ${c}`)
+      .join('\n')}`,
     `Review the extracted chores against the original message. For each inaccuracy, emit a change: remove hallucinated chores, rename ones that misrepresent the original. If the list is fully accurate, return an empty changes array.`,
   ]
 
